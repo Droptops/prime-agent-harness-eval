@@ -317,6 +317,56 @@ apparent effect that did not survive contact with more data.
 
 ---
 
+## Result 5: on the task built to favour the harness, the baseline still won
+
+Every task above was small-data. Task 1 — meant to be the IPython-favouring case
+— saturated at 4/4 in five turns. So the fair objection to this whole evaluation
+was that it never gave the harness a workload where its design could matter.
+
+Task 5 was written to remove that objection: six aggregations over
+`models.generated.ts` — **20,400 lines, 536KB, 1,162 model records across 32
+providers** — requiring grouping, a max, a filtered mean, and a tie-break. A
+tool-loop must page bulk text through its transcript; a persistent kernel need
+not.
+
+Honest framing: the baseline's `bash` tool can invoke `python3`, so this is not
+a capability gap. It tests persistence and ergonomics, not what is possible.
+
+| Run | Score | Turns | Tokens | Cost |
+|---|---|---|---|---|
+| prime-agent r1 | 6/6 | 7 | 101,678 | $0.1929 |
+| prime-agent r2 | 6/6 | 6 | 85,092 | $0.1716 |
+| **baseline r1** | 6/6 | 7 | **49,998** | **$0.1669** |
+| **baseline r2** | 6/6 | 9 | **51,052** | **$0.1590** |
+
+**Both conditions scored 6/6 on every run. The baseline used ~1.85x fewer
+tokens.** prime-agent solved it entirely through its kernel (4–5 `ipython` calls
+per run); the baseline stripped the TypeScript syntax and evaluated `MODELS` in
+Node, then aggregated — keeping bulk data out of its context just as effectively.
+
+On the task designed specifically to expose the harness's structural advantage,
+that advantage did not appear.
+
+### A contamination scare, and why these are the numbers reported
+
+An earlier pass of this task recorded far lower baseline usage (30,883 and
+19,036 tokens). That pass is **discarded**. The baseline's sandbox root had been
+widened to `/home/bench` to fix an earlier handicap, and the answer key
+(`truth-task5.json`) sat in `/home/bench/results` — readable, and `bash` is not
+constrained by the sandbox check at all.
+
+The baseline's own account described an independent derivation, and it reported
+1,122 nonzero-cost models and 40 zero-cost — neither figure appears in the
+answer key, which holds only the six result fields. So the narrative evidence
+pointed to a genuine solve.
+
+The numbers disagreed. With the answer key physically removed from the
+container, baseline usage roughly doubled (≈25k → ≈50k mean). The runs reported
+above are the clean ones. **Narrative plausibility is not evidence; removing the
+artifact and re-running is.**
+
+---
+
 ## Incidental: `install.sh` assumes a writable npm prefix
 
 With Node already present, the installer correctly skips its sudo path — the
@@ -347,6 +397,9 @@ and does not reproduce the error.
 - **No performance advantage was demonstrated on any task.** It lost task 1 on
   both tokens and cost, tied task 2, and on task 3 — once the prompt ambiguity
   that produced the apparent edge was removed — both conditions scored 100%.
+- **Including on a task built specifically to favour it.** A 536KB / 20,400-line
+  aggregation over 1,162 records: both conditions 6/6, baseline ~1.85x cheaper
+  in tokens.
 - **The self-improvement feature did not run at all**, at defaults or when
   configured to be maximally eager, and enabling it produced no measurable
   benefit in a controlled contrast.
@@ -366,6 +419,14 @@ the feature the project is named around did not run.
 - The baseline carried five disclosed handicaps, all against it.
 - Task-3 scoring encodes a contested reading of an ambiguous prompt.
 - Tasks were authored for this evaluation, not drawn from a public benchmark.
+- n=2 per condition on task 5. Given the run-to-run variance measured elsewhere
+  here (sd ≈24% of mean), the ~1.85x token gap is larger than that noise but the
+  sample is still small.
+- Answer keys lived inside the container's readable filesystem for most runs.
+  This was caught and corrected for task 5 (see the contamination note) but the
+  earlier tasks were not re-run under that control. Their scoring is
+  exact-match against a key the agent could in principle have read; no evidence
+  of that was found, but it was not excluded by construction.
 - **The repository makes no agent-capability or benchmark-score claims.**
   Nothing in the README or `packages/coding-agent/docs/` names a benchmark suite
   or reports a task-performance number, so there was no published figure to

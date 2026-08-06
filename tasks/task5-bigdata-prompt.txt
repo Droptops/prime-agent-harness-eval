@@ -1,0 +1,29 @@
+The repository at /home/bench/work/repo is prime-agent v0.7.0.
+
+packages/ai/src/models.generated.ts is a generated TypeScript file (~20,400
+lines, ~536KB) containing a `MODELS` object. Its top-level keys are provider
+ids; under each provider are model entries, each with fields including `id`,
+`reasoning`, `contextWindow`, and a nested `cost` object with `input` and
+`output`.
+
+Compute the following six aggregations over EVERY model in that file, and write
+them as a single JSON object to /home/bench/results/bigdata.json:
+
+{
+  "total_models": <int, count of all model entries across all providers>,
+  "providers_with_models": <int, number of top-level providers having >=1 model>,
+  "provider_with_most_models": {"provider": <str>, "count": <int>},
+  "largest_context_window": {"id": <str>, "contextWindow": <int>},
+  "reasoning_true_count": <int, models whose `reasoning` field is true>,
+  "mean_output_cost": <float, mean of cost.output across only those models whose
+                       cost.output is STRICTLY GREATER THAN ZERO, rounded to 4
+                       decimal places>
+}
+
+Note: some models have a cost.output of exactly 0. Those must be EXCLUDED from
+the mean_output_cost calculation, but still counted in total_models.
+
+If two models tie for the largest contextWindow, report the one whose `id`
+sorts last alphabetically.
+
+Write only the JSON object to that file. No prose, no markdown fence.

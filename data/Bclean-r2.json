@@ -1,0 +1,17 @@
+{
+  "condition": "B-baseline",
+  "model": "claude-opus-5",
+  "task": "/home/bench/prompts/task5-bigdata.txt",
+  "wall_seconds": 66.45,
+  "turns": 9,
+  "tokens": {
+    "input": 18,
+    "output": 3894,
+    "cache_read": 40539,
+    "cache_write": 6601
+  },
+  "total_tokens": 51052,
+  "cost_usd": 0.159,
+  "stop_reason": "end_turn",
+  "final_text": "Done. I computed the aggregations two independent ways (evaluating the object literal in Node after stripping TS-only syntax, and a separate line-based Python parse) and both agree exactly.\n\n**Results written to `/home/bench/results/bigdata.json`:**\n\n```json\n{\"total_models\":1162,\"providers_with_models\":32,\"provider_with_most_models\":{\"provider\":\"openrouter\",\"count\":272},\"largest_context_window\":{\"id\":\"us.meta.llama4-scout-17b-instruct-v1:0\",\"contextWindow\":3500000},\"reasoning_true_count\":890,\"mean_output_cost\":12.7267}\n```\n\nDetails worth noting:\n- **1162 models** across **32 providers**; none of the 32 top-level providers were empty.\n- Top providers: openrouter 272, vercel-ai-gateway 195, amazon-bedrock 115, prime-inference 103, opencode 59 \u2014 no tie for first.\n- **Tie handled:** exactly two models have the max `contextWindow` of 3,500,000 (`meta.llama4-scout-17b-instruct-v1:0` and `us.meta.llama4-scout-17b-instruct-v1:0`); per the tie rule I reported the alphabetically-last one (`us.` prefix).\n- **Zero-cost exclusion:** 40 models have `cost.output === 0` and were excluded from the mean but counted in `total_models`; the mean is over the remaining 1122 (sum 14279.32795 / 1122 = 12.72667\u2026 \u2192 12.7267).\n- Nested `cost.output` was read specifically (not `cost.input` or other `output`-named fields), and every model had numeric `contextWindow`, `id`, and `cost.output` \u2014 no missing-field warnings fired."
+}

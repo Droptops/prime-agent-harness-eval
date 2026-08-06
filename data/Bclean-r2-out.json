@@ -1,0 +1,1 @@
+{"total_models":1162,"providers_with_models":32,"provider_with_most_models":{"provider":"openrouter","count":272},"largest_context_window":{"id":"us.meta.llama4-scout-17b-instruct-v1:0","contextWindow":3500000},"reasoning_true_count":890,"mean_output_cost":12.7267}

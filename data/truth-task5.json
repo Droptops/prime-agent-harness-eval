@@ -1,0 +1,14 @@
+{
+  "largest_context_window": {
+    "contextWindow": 3500000,
+    "id": "us.meta.llama4-scout-17b-instruct-v1:0"
+  },
+  "mean_output_cost": 12.7267,
+  "provider_with_most_models": {
+    "count": 272,
+    "provider": "openrouter"
+  },
+  "providers_with_models": 32,
+  "reasoning_true_count": 890,
+  "total_models": 1162
+}
