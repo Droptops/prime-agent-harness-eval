@@ -1,0 +1,17 @@
+{
+  "condition": "B-baseline",
+  "model": "claude-opus-5",
+  "task": "/home/bench/prompts/task6-parallel.txt",
+  "wall_seconds": 51.22,
+  "turns": 8,
+  "tokens": {
+    "input": 16,
+    "output": 2943,
+    "cache_read": 28012,
+    "cache_write": 3368
+  },
+  "total_tokens": 34339,
+  "cost_usd": 0.1087,
+  "stop_reason": "end_turn",
+  "final_text": "Analysis complete. `/home/bench/results/packages.json` contains the single JSON object (no prose, valid JSON with the four required keys per package).\n\n| package | ts_files | total_lines | largest_file | exported_functions |\n|---|---|---|---|---|\n| agent | 5 | 2,395 | `packages/agent/src/agent-loop.ts` (986) | 5 |\n| ai | 51 | 34,013 | `packages/ai/src/models.generated.ts` (20,400) | 110 |\n| coding-agent | 267 | 115,565 | `packages/coding-agent/src/core/agent-session.ts` (11,188) | 753 |\n| tui | 32 | 14,927 | `packages/tui/src/components/editor.ts` (2,527) | 75 |\n\nMethod notes and edge cases checked:\n- Recursive walk of `packages/<pkg>/src` collecting regular files ending in `.ts`; verified no symlinks, no non-regular files, no nested `node_modules`, and no `.tsx`/`.d.ts` ambiguity (0 `.d.ts` files; all 355 matches are plain `.ts`).\n- Line counts: every file ends with a trailing newline (verified), so the count equals `wc -l` unambiguously; I excluded the phantom empty segment after a final newline.\n- `exported_functions`: matched `^export (async )?function` per file with the multiline flag, summed \u2014 cross-checked against `grep -hE`.\n- Tie-breaking for `largest_file` (strictly greater lines, or equal lines with a later-sorting path) was implemented, though no ties actually occurred; paths are repo-root-relative.\n- All four metrics were reproduced independently via `find`/`wc`/`grep` and matched the Node results exactly."
+}

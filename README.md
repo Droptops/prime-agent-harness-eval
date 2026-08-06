@@ -367,6 +367,65 @@ artifact and re-running is.**
 
 ---
 
+## Result 6: subagents spawn correctly, then the run dies before they report
+
+`rlm(...)` — spawning real child agents — is the other headline feature, and it
+was the last one untested.
+
+Task 6 is naturally parallel: four independent packages (`agent`, `ai`,
+`coding-agent`, `tui`, ranging 5 to 267 source files), four metrics each, 16
+scored fields. Three arms, answer key absent from the container throughout.
+
+| Arm | Prompt | Score | Turns | Tokens |
+|---|---|---|---|---|
+| baseline r1 / r2 | neutral | 16/16, 16/16 | 6, 8 | 25,115 / 34,339 |
+| prime-agent r1 / r2 | neutral | 16/16, 16/16 | 2, 2 | 25,510 / 25,447 |
+| prime-agent r1 / r2 | **must use `rlm()`** | **no output at all** | 2, 2 | 25,729 / 25,863 |
+
+Two distinct findings.
+
+**Left alone, prime-agent does not delegate.** On the neutral prompt it made
+zero `rlm()` calls in both runs, solved the task directly through its kernel,
+and scored 16/16. This is the one task where it is roughly at parity with the
+baseline on tokens (and better than the baseline's slower run).
+
+**Instructed to delegate, it fails completely.** Both runs produced *no
+`packages.json` at all*. This is not a model error — the children really were
+created (four per run, present on disk at `rlmDepth: 1`), and the parent did
+exactly what the documentation prescribes. Its final message:
+
+> *"Four children spawned. Ending turn to let them work."*
+
+`rlm.md` states the contract plainly: the call "returns immediately after task
+admission … it never waits for or returns the child's answer," and instructs
+"spawn independent children in separate calls and end the turn instead of
+awaiting completion." Results are supposed to arrive later, via `agent_message`
+or files.
+
+But in `-p` (single-shot, non-interactive) mode, **ending the turn ends the
+process.** Each child logged 7 events and was terminated. Nothing was collected,
+nothing was written, and the run exited reporting success. The parent followed
+the documented pattern precisely and the documented pattern silently destroys
+the task.
+
+### The unifying result
+
+This is the same root cause as Result 3. prime-agent's two differentiating
+features both assume a long-lived session:
+
+| Feature | Behaviour in `-p` mode |
+|---|---|
+| Continual harness (auto-refine) | Never fires, at any threshold |
+| Subagents (`rlm()`) | Spawn, then die uncollected — task fails silently |
+
+Neither is broken in itself: forced `/refine` writes accurate state, and `rlm()`
+genuinely creates children. Both are unusable in single-shot non-interactive
+invocation — which is how you would drive an agent from a script, a CI job, or
+any automated pipeline. Interactive and daemon modes were not tested here and
+may well behave differently; that is the natural next experiment.
+
+---
+
 ## Incidental: `install.sh` assumes a writable npm prefix
 
 With Node already present, the installer correctly skips its sudo path — the
@@ -407,6 +466,11 @@ and does not reproduce the error.
   correctness saturated and the cost difference was inside run-to-run noise.
 - **Global scope is unreachable from the CLI**, so every lesson it writes dies
   with the session.
+- **Subagents spawn but are never collected in `-p` mode.** Instructed to
+  delegate, the agent followed the documented spawn-and-end-turn pattern and
+  produced no output at all — a silent total failure, twice.
+- **Both differentiating features assume a long-lived session** and neither
+  functions in single-shot non-interactive use.
 
 The IPython-first design is a real engineering idea and it plausibly explains
 the low turn counts. But on this evidence it is not a general multiplier, and

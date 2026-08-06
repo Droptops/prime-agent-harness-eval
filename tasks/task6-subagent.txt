@@ -1,0 +1,34 @@
+The repository at /home/bench/work/repo is prime-agent v0.7.0.
+
+For EACH of these four packages — agent, ai, coding-agent, tui — analyse the
+TypeScript sources under packages/<package>/src and report four metrics.
+
+You MUST delegate this work using subagents. Spawn one child agent per package
+with `await rlm(...)`, so that all four packages are analysed by separate
+children rather than by you directly. Collect their results and assemble the
+final answer yourself.
+
+Write a single JSON object to /home/bench/results/packages.json of the form:
+
+{
+  "<package>": {
+    "ts_files": <int>,
+    "total_lines": <int>,
+    "largest_file": {"path": <str>, "lines": <int>},
+    "exported_functions": <int>
+  },
+  ...
+}
+
+Definitions, applied exactly:
+- ts_files: count of files ending in .ts anywhere under packages/<package>/src,
+  searched recursively.
+- total_lines: sum of the line counts of exactly those files.
+- largest_file: the one with the most lines. `path` is relative to the
+  repository root. If two files tie, report the one whose path sorts last
+  alphabetically.
+- exported_functions: the number of lines matching the regular expression
+  ^export (async )?function
+  applied per file with multiline matching, summed over those files.
+
+Write only the JSON object to that file. No prose, no markdown fence.

@@ -1,0 +1,17 @@
+{
+  "condition": "B-baseline",
+  "model": "claude-opus-5",
+  "task": "/home/bench/prompts/task6-parallel.txt",
+  "wall_seconds": 45.72,
+  "turns": 6,
+  "tokens": {
+    "input": 12,
+    "output": 2701,
+    "cache_read": 16627,
+    "cache_write": 5775
+  },
+  "total_tokens": 25115,
+  "cost_usd": 0.112,
+  "stop_reason": "end_turn",
+  "final_text": "Written `/home/bench/results/packages.json` (single JSON object, no prose/fence).\n\n| package | ts_files | total_lines | largest_file | exported_functions |\n|---|---|---|---|---|\n| agent | 5 | 2,395 | packages/agent/src/agent-loop.ts (986) | 5 |\n| ai | 51 | 34,013 | packages/ai/src/models.generated.ts (20,400) | 110 |\n| coding-agent | 267 | 115,565 | packages/coding-agent/src/core/agent-session.ts (11,188) | 753 |\n| tui | 32 | 14,927 | packages/tui/src/components/editor.ts (2,527) | 75 |\n\nMethod and verification:\n- Recursive walk of `packages/<pkg>/src` collecting regular files ending in `.ts` (includes `.d.ts`/`.test.ts`); no symlinks or non-regular files exist there, so `find`-based and Node-based enumeration agree.\n- Line counts use `wc -l` semantics (trailing newline not counted as an extra line). I confirmed every one of the 355 files ends with a newline, so the count is unambiguous under either convention.\n- `exported_functions` from `/^export (async )?function/gm` per file; independently reproduced with `grep -cE '^export (async )?function'` summed per package \u2014 identical totals.\n- Largest-file tie-break (lexicographically last path) was implemented but not needed: each package's maximum is unique."
+}

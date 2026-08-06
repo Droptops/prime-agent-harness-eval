@@ -1,0 +1,38 @@
+{
+  "agent": {
+    "exported_functions": 5,
+    "largest_file": {
+      "lines": 986,
+      "path": "packages/agent/src/agent-loop.ts"
+    },
+    "total_lines": 2395,
+    "ts_files": 5
+  },
+  "ai": {
+    "exported_functions": 110,
+    "largest_file": {
+      "lines": 20400,
+      "path": "packages/ai/src/models.generated.ts"
+    },
+    "total_lines": 34013,
+    "ts_files": 51
+  },
+  "coding-agent": {
+    "exported_functions": 753,
+    "largest_file": {
+      "lines": 11188,
+      "path": "packages/coding-agent/src/core/agent-session.ts"
+    },
+    "total_lines": 115565,
+    "ts_files": 267
+  },
+  "tui": {
+    "exported_functions": 75,
+    "largest_file": {
+      "lines": 2527,
+      "path": "packages/tui/src/components/editor.ts"
+    },
+    "total_lines": 14927,
+    "ts_files": 32
+  }
+}
