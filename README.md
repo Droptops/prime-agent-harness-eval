@@ -465,10 +465,21 @@ zero `rlm()` calls in both runs, solved the task directly through its kernel,
 and scored 16/16. This is the one task where it is roughly at parity with the
 baseline on tokens (and better than the baseline's slower run).
 
-**Instructed to delegate, it fails completely.** Both runs produced *no
-`packages.json` at all*. This is not a model error — the children really were
-created (four per run, present on disk at `rlmDepth: 1`), and the parent did
-exactly what the documentation prescribes. Its final message:
+**Instructed to delegate, it fails intermittently — and the documented pattern
+is the failing one.** A later verification run (added when checking the exit
+code for an upstream bug report) succeeded, which corrects an earlier claim here
+that the failure was total:
+
+| `-p` run | Parent turns | Events per child | `agent_message` | Output |
+|---|---|---|---|---|
+| A | 2 | 7 | few | **none**, exit 0 |
+| B | 2 | 7 | few | **none**, exit 0 |
+| C | 9 | 19–20 | 198 | written, **16/16** |
+
+In A and B the parent spawned four children and ended its turn. In C it stayed
+in-turn and polled for results. Same prompt, same model, same settings — the
+difference is a model choice, and **the choice the documentation prescribes is
+the one that loses the work.** Its final message in the failing runs:
 
 > *"Four children spawned. Ending turn to let them work."*
 
@@ -541,8 +552,8 @@ no client attached, then drive it purely through `prime-agent send`.
 
 | Feature | `-p` single-shot | Interactive PTY | Daemon (no client) |
 |---|---|---|---|
-| auto-refine (`turnInterval: 1`) | **never fires** | fires | **fires** |
-| `rlm()` subagents | **die uncollected, no output** | collected, 16/16 | **collected, 15/16** |
+| auto-refine (`turnInterval: 1`) | **never fires** (consistent) | fires | **fires** |
+| `rlm()` subagents | **discarded in 2 of 3 runs** | collected, 16/16 | **collected, 15/16** |
 
 Both daemon runs completed their tasks correctly (task 3: 30/30; task 4: exact;
 the delegated task-6 run scored 15/16, missing only
@@ -568,8 +579,19 @@ are killed mid-flight (7 events each, against 13 when they are allowed to
 finish). Interactive and daemon sessions outlive the turn, so both complete.
 
 The practical consequence is unchanged and still worth stating plainly: **under
-`-p` both failures are silent.** No warning, no error, and in the subagent case
-the run exits reporting success having written nothing.
+`-p` both failures are silent.** No warning, no error, empty stderr, no error
+event in the `--mode json` stream, and in the subagent case the run exits **0**
+having written nothing. The exit code was measured, not assumed.
+
+This was reported upstream as
+[PrimeIntellect-ai/prime-agent#792](https://github.com/PrimeIntellect-ai/prime-agent/issues/792).
+
+*Correction: this document previously described the subagent failure as total
+("no output at all, twice"). Measuring the exit code for that bug report
+produced a third run that succeeded, revealing the failure is intermittent and
+depends on whether the model ends its turn after spawning. The corrected table
+is above. This is the fifth claim in this evaluation overturned by checking
+something I was confident about.*
 
 ---
 
@@ -750,9 +772,10 @@ and does not reproduce the error.
   out any saving larger than ~13%.
 - **Global scope is unreachable from the CLI**, so every lesson it writes dies
   with the session.
-- **Subagents spawn but are never collected in `-p` mode.** Instructed to
-  delegate, the agent followed the documented spawn-and-end-turn pattern and
-  produced no output at all — a silent total failure, twice.
+- **Subagents are silently discarded in `-p` when the parent ends its turn**,
+  which is the documented pattern. 2 of 3 runs produced no output at all,
+  exit 0; the third stayed in-turn, polled, and scored 16/16. Intermittent and
+  model-dependent, which makes it worse than a clean failure.
 - **Both features work in interactive and daemon sessions.** The defect is
   specific to `-p`, which terminates the process before these post-turn
   asynchronous operations can run. Unattended scripted use is fine via
