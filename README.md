@@ -595,7 +595,58 @@ Task 2 is rubric-scored and has no answer key, so it needed no control.
 
 ---
 
-## What the paper actually claims — and why this evaluation does not test it
+## Result 8: I could not build a task that separates them on quality
+
+Every task above saturated: both conditions reached 100%. That is a real
+limitation — an evaluation that never discriminates on correctness is measuring
+cost, not capability. So task 7 was built specifically to break the ceiling.
+
+It is a **transitive import closure**: over the 267 `.ts` files under
+`packages/coding-agent/src`, how many reach `packages/ai/src/types.ts` through
+the import graph? It is exactly checkable but genuinely deep — a graph
+reachability problem with cycles, `.js` specifiers that resolve to `.ts`
+sources, directory imports resolving via `index.ts`, workspace package names
+that do **not** match their directory names (`packages/ai` is
+`@earendil-works/pi-ai`), and subpath exports. The shortcut answer is visibly
+wrong: **0 files import the target directly; 187 reach it transitively.**
+
+**All six runs, both conditions, scored 4/4.** It saturated too.
+
+| | mean tokens | spread |
+|---|---|---|
+| baseline (n=3) | 264,071 | 1.9x (176k–342k) |
+| prime-agent (n=3) | 257,987 | **4.8x (109k–524k)** |
+
+Cost is a tie — 2% apart. The notable difference is **variance**: prime-agent
+ranged 109k–524k on identical inputs, against the baseline's 176k–342k. Its
+most expensive run spent a large fraction of its budget installing the
+TypeScript compiler to resolve imports properly, which is a defensible choice
+that happened to cost 4.8x its own cheapest run. Across this evaluation
+prime-agent's token usage has consistently been the less predictable of the two.
+
+### The uncomfortable part: the task defeated my reference implementation, not the agents
+
+My ground-truth script was wrong **three times** on this task, and both
+conditions were right first try, independently, with identical answers:
+
+1. A path-comparison bug (relative `REPO` against resolved paths) — closure
+   returned 0.
+2. An incomplete graph: only `coding-agent` and `ai` sources were walked, so
+   paths routing through `packages/agent` were invisible — undercounted by 6.
+3. A regex anchored on `^import`/`^export` with `[^;\n]*?`, which cannot cross
+   a newline and therefore **missed every multi-line import** — ubiquitous in
+   this codebase.
+
+Only after the third fix did my key reach 187 — the number both conditions had
+produced from the start.
+
+**So the honest conclusion is not "the harness and the baseline are equivalent."
+It is that at this model tier, on repository-analysis tasks, I was unable to
+construct a correctness test that discriminates between them** — including one
+hard enough to defeat my own implementation three times. Every quality result in
+this document should be read with that ceiling in mind. Separating these systems
+on capability likely requires a task class this evaluation never reached, not
+more runs of the ones it did.
 
 Earlier versions of this document repeatedly disclaimed
 [arXiv 2605.09998](https://arxiv.org/abs/2605.09998) as "not reviewed here."
@@ -686,7 +737,10 @@ the feature the project is named around did not run.
 ## Limitations
 
 - n=4 on task 3; n=1 on tasks 1 and 2.
-- Task 1 saturated (4/4 both) and could not show a quality difference.
+- **Every task saturated at 100% for both conditions**, including one built
+  specifically to break the ceiling (Result 8). This evaluation measures cost
+  and mode-behaviour reliably; it does not measure capability, because nothing
+  in it discriminated on correctness.
 - The baseline carried five disclosed handicaps, all against it.
 - Task-3 scoring encodes a contested reading of an ambiguous prompt.
 - Tasks were authored for this evaluation, not drawn from a public benchmark.

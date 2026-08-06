@@ -1,0 +1,17 @@
+{
+  "condition": "B-baseline",
+  "model": "claude-opus-5",
+  "task": "/home/bench/prompts/task7-closure.txt",
+  "wall_seconds": 135.34,
+  "turns": 17,
+  "tokens": {
+    "input": 34,
+    "output": 9111,
+    "cache_read": 150251,
+    "cache_write": 16793
+  },
+  "total_tokens": 176189,
+  "cost_usd": 0.408,
+  "stop_reason": "end_turn",
+  "final_text": "Done. Results written to `/home/bench/results/closure.json`:\n\n```json\n{\"transitive_importer_count\": 187, \"direct_importer_count\": 0, \"first_ten_transitive\": [\"packages/coding-agent/src/bun/register-bedrock.ts\", \"packages/coding-agent/src/cli-main.ts\", \"packages/coding-agent/src/cli/args.ts\", \"packages/coding-agent/src/cli/config-selector.ts\", \"packages/coding-agent/src/cli/daemon-command.ts\", \"packages/coding-agent/src/cli/daemon-launch.ts\", \"packages/coding-agent/src/cli/daemon-list-format.ts\", \"packages/coding-agent/src/cli/daemon-ps-format.ts\", \"packages/coding-agent/src/cli/daemon-ps.ts\", \"packages/coding-agent/src/cli/daemon-stop-confirm.ts\"], \"total_ts_files_scanned\": 267}\n```\n\nHow it was computed (script at `/home/bench/work/repo/closure.py`):\n\n- **Package map**: read each `packages/*/package.json` `name` \u2192 `@earendil-works/pi-agent-core`, `pi-ai`, `pi-coding-agent`, `pi-tui` (none match directory names, as noted).\n- **Import extraction**: line-anchored regex matching `import|export \u2026 from \"SPEC\"` (semicolon-bounded so it can't run past a statement, but still spans multi-line clauses) plus bare `import \"SPEC\"`. I verified the extraction against a comment/string-stripped version of every `.ts` file in the repo \u2014 zero differences, so JSDoc examples like `import { CustomEditor } from \"@earendil-works/pi-coding-agent\"` are correctly ignored, and bare imports like `packages/ai/src/stream.ts`'s `import \"./providers/register-builtins.js\"` are captured.\n- **Resolution**: relative `.js`\u2192`.ts`, directory\u2192`index.ts`, exact package name\u2192`src/index.ts`, subpath\u2192first of `src/<sub>.ts`, `src/<sub>/index.ts`, `src/providers/<sub>.ts` (this handles `pi-ai/mcp`\u2192`src/mcp.ts`, `/oauth`, `/bedrock-provider`). The only unresolved relative specifiers repo-wide were in `packages/ai/bedrock-provider.d.ts` and `packages/ai/scripts/generate-models.ts`, both irrelevant to this closure.\n- **Traversal**: built the reverse edge map and BFS'd out from `packages/ai/src/types.ts` with a visited set, which is cycle-safe by construction.\n\nNotable finding: **direct_importer_count is genuinely 0**. No file under `packages/coding-agent/src` names `ai/src/types.ts` in one hop \u2014 the only `pi-ai` specifiers used there are the bare package name (77\u00d7), `/mcp`, `/oauth`, and `/bedrock-provider`, and there are no relative paths into `packages/ai`. Everything reaches `types.ts` at \u22652 hops, typically via `packages/ai/src/index.ts`, which re-exports `./types.js` (e.g. `bun/register-bedrock.ts \u2192 ai/src/index.ts \u2192 ai/src/types.ts`). 187 of the 267 files reach it; spot-checking the 80 that don't (e.g. `src/config.ts`, which imports only node builtins and a local `utils/child-process.js`) confirms they're legitimately disconnected from the AI types. `.d.ts` files would have counted as `.ts`, but there are none under `packages/coding-agent/src`."
+}

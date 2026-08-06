@@ -1,0 +1,17 @@
+{
+  "condition": "B-baseline",
+  "model": "claude-opus-5",
+  "task": "/home/bench/prompts/task7-closure.txt",
+  "wall_seconds": 147.94,
+  "turns": 17,
+  "tokens": {
+    "input": 34,
+    "output": 11160,
+    "cache_read": 240024,
+    "cache_write": 23175
+  },
+  "total_tokens": 274393,
+  "cost_usd": 0.544,
+  "stop_reason": "end_turn",
+  "final_text": "Done. `/home/bench/results/closure.json` contains the result.\n\n**Method**\n- Extracted specifiers with a comment-stripping scanner (strings preserved) plus a statement-anchored regex for `import \u2026 from \"S\"`, `export \u2026 from \"S\"`, and bare `import \"S\"`. Dynamic `import(\"\u2026\")` was excluded per spec. I cross-validated the extraction two ways (raw vs. comment-stripped, anchored vs. permissive `from \"\u2026\"` scan); the only differences were a JSDoc example in `core/extensions/types.ts` (`import { CustomEditor } from \"@earendil-works/pi-coding-agent\"` inside a comment \u2014 correctly dropped) and test files outside `src`.\n- Resolution: relative `.js`\u2192`.ts`, directory\u2192`index.ts`, workspace package name\u2192`<pkg>/src/index.ts` (names: `@earendil-works/pi-ai` \u2192 `packages/ai`, `pi-agent-core` \u2192 `packages/agent`, `pi-tui` \u2192 `packages/tui`, `pi-coding-agent` \u2192 `packages/coding-agent`), subpaths tried `src/<sub>.ts`, `src/<sub>/index.ts`, `src/providers/<sub>.ts` (e.g. `pi-ai/mcp`, `pi-ai/oauth`, `pi-ai/bedrock-provider`). Only two specifiers failed to resolve anywhere in the repo, both irrelevant (`./types.js` in `packages/ai/scripts/generate-models.ts`, and `./dist/bedrock-provider.js` in a `.d.ts` shim).\n- Reachability computed by BFS on the reversed graph from `packages/ai/src/types.ts`, so cycles are handled naturally.\n\n**Results**\n- `total_ts_files_scanned`: 267\n- `transitive_importer_count`: 187\n- `direct_importer_count`: **0** \u2014 this is genuine, not a bug: no file under `packages/coding-agent/src` uses the specifier `@earendil-works/pi-ai/types` (the only spec that would resolve to `packages/ai/src/types.ts` from outside that package). They go through `@earendil-works/pi-ai` \u2192 `packages/ai/src/index.ts`, which re-exports `./types.js`, or via `@earendil-works/pi-agent-core`. Example verified path: `cli/args.ts` \u2192 `agent/src/index.ts` \u2192 `agent/src/agent.ts` \u2192 `ai/src/index.ts` \u2192 `ai/src/types.ts`."
+}

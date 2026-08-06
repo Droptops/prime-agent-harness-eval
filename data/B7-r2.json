@@ -1,0 +1,17 @@
+{
+  "condition": "B-baseline",
+  "model": "claude-opus-5",
+  "task": "/home/bench/prompts/task7-closure.txt",
+  "wall_seconds": 189.46,
+  "turns": 20,
+  "tokens": {
+    "input": 40,
+    "output": 13271,
+    "cache_read": 302866,
+    "cache_write": 25455
+  },
+  "total_tokens": 341632,
+  "cost_usd": 0.6425,
+  "stop_reason": "end_turn",
+  "final_text": "Written to `/home/bench/results/closure.json`.\n\n**Method:** I built the graph over all 910 `.ts` files in the repo (excluding `node_modules`/`.git`), extracting specifiers with a scanner that first blanks comments and template-literal contents \u2014 this matters, since a naive regex picks up ~10 fake imports embedded in code-sample template literals and strings (e.g. `packages/ai/scripts/generate-models.ts` emits `import type { Model } from \"./types.js\";` inside a generated-file template). I verified the sanitized extraction is exactly the naive extraction minus those false positives, and cross-checked that no `from \"...\"` occurrence was wrongly dropped.\n\nResolution followed the stated rules (`.js`\u2192`.ts`, dir\u2192`index.ts`, package name\u2192`src/index.ts`, subpath\u2192`src/<sub>.ts` | `src/<sub>/index.ts` | `src/providers/<sub>.ts`). Every relative specifier in the repo ends in `.js`; the only unresolvable relative one is `./dist/bedrock-provider.js`. Reachability was computed by BFS on the reversed graph from `packages/ai/src/types.ts`, which is cycle-safe.\n\n**Results:**\n- `transitive_importer_count`: **187** of 267\n- `direct_importer_count`: **0** \u2014 no file under `packages/coding-agent/src` names `types.ts` in one hop; they go through `@earendil-works/pi-ai` (\u2192 `ai/src/index.ts`) or subpaths `\u2026/oauth`, `\u2026/mcp`, `\u2026/bedrock-provider`. There is no `@earendil-works/pi-ai/types` specifier anywhere and no relative path crossing into `ai/src`.\n- `total_ts_files_scanned`: **267**\n\nThe 80 non-reaching files are consistent leaf/UI utilities (`utils/*`, TUI-only components) \u2014 notably `packages/tui` contains zero references to `pi-ai`, so paths through the TUI package do not reach the target."
+}

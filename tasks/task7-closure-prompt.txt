@@ -1,0 +1,44 @@
+The repository at /home/bench/work/repo is prime-agent v0.7.0. It is a
+TypeScript monorepo under packages/.
+
+Build the import graph and compute a transitive closure.
+
+A file A "imports" file B if A contains an `import ... from "SPEC"`, an
+`export ... from "SPEC"`, or a bare `import "SPEC"` statement, where SPEC
+resolves to B under these rules:
+
+- A relative SPEC ending in `.js` resolves to the `.ts` file of the same name
+  (this codebase writes ESM `.js` specifiers that resolve to `.ts` sources).
+- A relative SPEC naming a directory resolves to `index.ts` inside it.
+- A SPEC that exactly matches a workspace package's `name` field (from that
+  package's package.json) resolves to that package's `src/index.ts`.
+  Note: package names do NOT match their directory names.
+- A subpath SPEC of the form `<package-name>/<sub>` resolves to the first of
+  `src/<sub>.ts`, `src/<sub>/index.ts`, or `src/providers/<sub>.ts` that exists.
+- Anything else (external npm packages, node builtins) resolves to nothing.
+
+Follow the graph transitively, including through files in packages/ai/src.
+The graph contains cycles; handle them.
+
+Write a single JSON object to /home/bench/results/closure.json:
+
+{
+  "transitive_importer_count": <int>,
+  "direct_importer_count": <int>,
+  "first_ten_transitive": [<10 strings>],
+  "total_ts_files_scanned": <int>
+}
+
+Where, considering ONLY the .ts files under packages/coding-agent/src
+(recursively):
+
+- transitive_importer_count: how many of them transitively reach
+  packages/ai/src/types.ts by following the graph.
+- direct_importer_count: how many of them import packages/ai/src/types.ts
+  directly, in one hop.
+- first_ten_transitive: the first ten of the transitive set, as paths relative
+  to the repository root, sorted ascending as strings.
+- total_ts_files_scanned: how many .ts files exist under
+  packages/coding-agent/src recursively.
+
+Write only the JSON object to that file. No prose, no markdown fence.
