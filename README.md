@@ -3,11 +3,16 @@
 An A/B evaluation of [PrimeIntellect-ai/prime-agent](https://github.com/PrimeIntellect-ai/prime-agent)
 v0.7.0 (commit `c22549a3`) against a plain tool-calling baseline, same model, same tasks.
 
-**TL;DR:** No demonstrated general advantage. The baseline won the repo-navigation
-task outright on tokens and cost, tied the judgment task, and the one apparent
-quality win for the harness dissolves on inspection into a single ambiguous
-interpretive call. Separately, and more definitively: the "continual harness"
-self-improvement feature **never fired once** across any run.
+**TL;DR:** No demonstrated performance advantage. The baseline won the
+repo-navigation task outright on tokens and cost, tied the judgment task, and the
+one apparent quality win for the harness turned out to be an ambiguity in my own
+prompt — when the prompt is disambiguated and rerun, **both conditions score
+100%** and the difference disappears entirely.
+
+Separately, and more definitively: the "continual harness" self-improvement
+feature **never fired in any of five sessions**, including two configured to be
+maximally eager (`turnInterval: 3`, `cooldownMs: 0`). A controlled ON/OFF
+contrast found no difference in cost or correctness.
 
 This document was adversarially verified before publication; the verification
 overturned several of its own earlier conclusions. Those are marked below.
@@ -127,19 +132,37 @@ baseline run wrote that *"the source is genuinely ambiguous about what counts
 as a 'credential env var'."* prime-agent's own refinement memory recorded the
 alternative reading and labelled it a judgment call.
 
-**Conclusion for Result 2:** this does not show prime-agent producing more
-correct output. It shows prime-agent selecting the narrow reading more often on
-an ambiguous prompt whose answer key happens to encode the narrow reading —
-2/4 vs 0/4, Fisher's exact p ≈ 0.43, not significant. A single run would have
-shown "30/30 vs 29/30" and badly overstated it.
+### Rerun with a disambiguated prompt: the difference vanishes
 
-Cost of that non-result, averaged over 4 runs:
+The task was rewritten to name the exact function whose return value is wanted
+(`getApiKeyEnvVars`) and to state the exclusion explicitly. Ground truth was
+independently re-verified to equal that function's return for all 32 union
+members. Then both conditions were rerun.
+
+| Run | Result |
+|---|---|
+| prime-agent v2 r1 | **30/30, exact match** |
+| prime-agent v2 r2 | **30/30, exact match** |
+| baseline v2 r1 | **30/30, exact match** |
+| baseline v2 r2 | **30/30, exact match** |
+
+All four runs produced byte-identical output equal to the answer key. Across all
+12 task-3 runs (v1 and v2), the response space contains no within-reading
+variance: a run is either exactly right or takes the one alternative reading.
+
+**Conclusion for Result 2: there is no quality difference on this task.** The
+v1 result measured which reading each condition picked on an ambiguous prompt
+whose answer key encoded one of them. Removing the ambiguity removes the effect.
+A single v1 run would have shown "30/30 vs 29/30" and I would have published a
+capability claim that does not exist.
+
+What survives is a cost difference for identical output:
 
 | | prime-agent | baseline |
 |---|---|---|
-| Tokens (mean) | 110,730 | 57,819 |
-| Cost (mean) | $0.3346 | $0.2780 |
-| Ratio | **1.92x tokens, 1.20x cost** | — |
+| v1 tokens (mean, n=4) | 110,730 | 57,819 |
+| v2 tokens (mean, n=2) | 73,443 | 45,187 |
+| Ratio | **~1.6–1.9x tokens** | — |
 
 ---
 
@@ -176,6 +199,42 @@ that triggers learning**. A task explicitly designed to run long finished in 5
 turns.
 
 On realistic work, the continual harness is inert.
+
+### It stays inert even when configured to be maximally eager
+
+The obvious objection is that 25 turns is simply too high a default. So the
+threshold was lowered and the feature given every chance to run.
+
+A controlled within-harness contrast, no baseline arm. Both arms run prime-agent
+on the same two tasks in the same continued session; the only difference is
+whether auto-refine is permitted between them. Task 2 was chosen to be directly
+answerable from the structural lesson refine writes during task 1.
+
+| Arm | settings | task-1 turns | refine fired | task-2 tokens | task-2 result |
+|---|---|---|---|---|---|
+| ON | `{enabled:true, turnInterval:3, cooldownMs:0}` | 5 | **no** | 47,891 | exact match |
+| OFF | `{enabled:false}` | 4 | no | 46,382 | exact match |
+
+Session continuation was verified (identical session id across both tasks in
+both arms), so the ON arm genuinely had a prior turn to refine from.
+
+**Auto-refine did not fire with a threshold of 3 and a session of 5 assistant
+turns and no cooldown.** No `harness_state.json` was created; the session's
+artifact directory contains kernel state but no `harness/` directory at all.
+Across five independent sessions — three at defaults, two maximally eager —
+the pass ran zero times. Explicitly invoking `/refine` works and writes state,
+so the machinery is functional; what does not happen is automatic invocation.
+
+The ON arm cost *more* (95,040 vs 73,712 tokens on task 1) and produced the same
+answer. Enabling the feature bought nothing.
+
+I could not fully isolate the mechanism. `_autoRefineAllowedForSession()` gates
+on `_rlmDepth === 0 && _localHarnessStateDir() !== undefined` and is evaluated
+before the `enabled` flag, and the harness directory is created lazily by the
+refine pass rather than provisioned at session start. That is consistent with
+what was observed but not proven to be the cause. **The empirical claim — it
+does not fire in non-interactive runs regardless of threshold — is solid; the
+explanation is a hypothesis.**
 
 ---
 
@@ -234,12 +293,13 @@ and does not reproduce the error.
 ## Verdict
 
 - **The harness's 5–10x-token failure mode did not occur.** Its costs are
-  modest: ~1.9x tokens, ~1.2x dollars.
-- **No general performance advantage was demonstrated.** It lost task 1 on both
-  tokens and cost, tied task 2, and its task-3 edge reduces to one ambiguous
-  interpretive call that is not statistically significant.
-- **The self-improvement claim is untested by normal use**, because normal use
-  never triggers it.
+  modest: ~1.6–1.9x tokens, ~1.2x dollars.
+- **No performance advantage was demonstrated on any task.** It lost task 1 on
+  both tokens and cost, tied task 2, and on task 3 — once the prompt ambiguity
+  that produced the apparent edge was removed — both conditions scored 100%.
+- **The self-improvement feature did not run at all**, at defaults or when
+  configured to be maximally eager, and enabling it produced no measurable
+  benefit in a controlled contrast.
 
 The IPython-first design is a real engineering idea and it plausibly explains
 the low turn counts. But on this evidence it is not a general multiplier, and

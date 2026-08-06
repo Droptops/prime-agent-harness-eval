@@ -1,0 +1,14 @@
+{
+  "CLOUDFLARE_API_KEY": [
+    "cloudflare-ai-gateway",
+    "cloudflare-workers-ai"
+  ],
+  "MOONSHOT_API_KEY": [
+    "moonshotai",
+    "moonshotai-cn"
+  ],
+  "OPENCODE_API_KEY": [
+    "opencode",
+    "opencode-go"
+  ]
+}

@@ -34,7 +34,13 @@ PRICING = {
     "claude-sonnet-5": {"in": 3.00, "out": 15.00, "cache_read": 0.30, "cache_write": 3.75},
 }
 
-WORKDIR = Path(os.environ.get("BASELINE_WORKDIR", "/home/bench/work"))
+# cwd must match condition A's (`--cwd ~/work/repo`), or glob patterns implied
+# by the task text resolve differently between conditions.
+WORKDIR = Path(os.environ.get("BASELINE_WORKDIR", "/home/bench/work/repo"))
+# Sandbox root is deliberately wider than cwd: every task writes its deliverable
+# to /home/bench/results. Confining writes to cwd made write_file unable to
+# produce any required output, which silently forced a bash fallback.
+SANDBOX_ROOT = Path(os.environ.get("BASELINE_SANDBOX", "/home/bench"))
 
 TOOLS = [
     {
@@ -92,16 +98,20 @@ TOOLS = [
 
 MAX_TOOL_OUTPUT = 30_000
 
+# prime-agent ships rg and fd and puts them on its own PATH. Give the baseline
+# the same binaries so the comparison is about the harness, not the toolbox.
+RG_BIN = os.environ.get("RG_BIN_DIR", "/home/bench/.prime/agent/bin")
+
 
 def _resolve(path_str: str) -> Path:
-    """Confine every file operation to WORKDIR. `path` is untrusted model output."""
+    """Confine file operations to SANDBOX_ROOT. `path` is untrusted model output."""
     candidate = Path(path_str)
     if not candidate.is_absolute():
         candidate = WORKDIR / candidate
     resolved = candidate.resolve()
-    root = WORKDIR.resolve()
+    root = SANDBOX_ROOT.resolve()
     if resolved != root and root not in resolved.parents:
-        raise ValueError(f"path escapes the working directory: {path_str}")
+        raise ValueError(f"path escapes the sandbox root {root}: {path_str}")
     return resolved
 
 
@@ -109,16 +119,24 @@ def run_tool(name: str, args: dict) -> tuple[str, bool]:
     """Returns (result_text, is_error)."""
     try:
         if name == "bash":
+            # executable=/bin/bash: shell=True alone runs /bin/sh, which is dash
+            # here, so [[ ]], process substitution and arrays fail with exit 127.
             proc = subprocess.run(
                 args["command"],
                 shell=True,
+                executable="/bin/bash",
                 cwd=WORKDIR,
                 capture_output=True,
                 text=True,
                 timeout=180,
+                env={**os.environ, "PATH": f"{RG_BIN}:{os.environ.get('PATH','')}"},
             )
             out = (proc.stdout or "") + (proc.stderr or "")
-            return out[:MAX_TOOL_OUTPUT] or "(no output)", proc.returncode != 0
+            if proc.returncode != 0:
+                out += f"\n[exit status {proc.returncode}]"
+            # A nonzero exit is normal for grep/test and is NOT a tool error.
+            # Flagging it as one pollutes context and invites pointless retries.
+            return out[:MAX_TOOL_OUTPUT] or "(no output)", False
 
         if name == "read_file":
             target = _resolve(args["path"])

@@ -1,0 +1,13 @@
+In packages/ai/src/env-api-keys.ts, consider the values returned by
+`getApiKeyEnvVars(provider)` for every member of the `KnownProvider` union in
+packages/ai/src/types.ts.
+
+Some credential environment variable names are returned for more than one
+provider. Identify every such shared variable.
+
+Write a single JSON object to /home/bench/results/shared.json mapping each
+environment variable name that is returned for MORE THAN ONE provider to the
+sorted array of provider ids that share it. Only consider providers whose
+returned array has exactly one element.
+
+Write only the JSON object to that file. No prose, no markdown fence.

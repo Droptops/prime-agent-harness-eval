@@ -1,0 +1,17 @@
+{
+  "condition": "B-baseline",
+  "model": "claude-opus-5",
+  "task": "/home/bench/prompts/task3v2-long-horizon.txt",
+  "wall_seconds": 63.45,
+  "turns": 5,
+  "tokens": {
+    "input": 10,
+    "output": 5066,
+    "cache_read": 31111,
+    "cache_write": 11132
+  },
+  "total_tokens": 47319,
+  "cost_usd": 0.2118,
+  "stop_reason": "end_turn",
+  "final_text": "Verified: 32 union members, 30 mapped, 2 correctly omitted (`amazon-bedrock`, `openai-codex` \u2014 both return `undefined` since they have no early-return branch and no `envMap` key), and no keys outside the union.\n\n`/home/bench/results/matrix.json` contains just the JSON object. Key points on the semantics:\n\n- Only `anthropic` and `github-copilot` return multi-element arrays, via early returns at lines 96\u2013103 (order preserved: OAuth token first for Anthropic, `COPILOT_GITHUB_TOKEN` \u2192 `GH_TOKEN` \u2192 `GITHUB_TOKEN` for Copilot).\n- All other results are single-element arrays from the `envMap` literal (lines 105\u2013134).\n- Shared env vars are faithfully duplicated rather than deduped: `moonshotai`/`moonshotai-cn` both \u2192 `MOONSHOT_API_KEY`, `opencode`/`opencode-go` both \u2192 `OPENCODE_API_KEY`, `cloudflare-workers-ai`/`cloudflare-ai-gateway` both \u2192 `CLOUDFLARE_API_KEY`.\n- Non-obvious names read literally rather than inferred: `google` \u2192 `GEMINI_API_KEY` (not `GOOGLE_API_KEY`), `google-vertex` \u2192 `GOOGLE_CLOUD_API_KEY`, `vercel-ai-gateway` \u2192 `AI_GATEWAY_API_KEY`, `huggingface` \u2192 `HF_TOKEN`.\n- Excluded as instructed: the AWS_* credential checks and `GOOGLE_APPLICATION_CREDENTIALS`/`GOOGLE_CLOUD_PROJECT`/`GOOGLE_CLOUD_LOCATION` reads, which live in `getEnvApiKey`/`hasVertexAdcCredentials` \u2014 so `amazon-bedrock` is absent entirely and `google-vertex` lists only `GOOGLE_CLOUD_API_KEY`."
+}
