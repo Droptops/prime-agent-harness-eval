@@ -1,0 +1,88 @@
+{
+  "schema": 1,
+  "entries": {
+    "prompt": {},
+    "memory": {
+      "getapikeyenvvars_provider_env_var_matrix_prime_agent_v0_7_0": {
+        "id": "getapikeyenvvars_provider_env_var_matrix_prime_agent_v0_7_0",
+        "kind": "memory",
+        "title": "getApiKeyEnvVars provider→env-var matrix (prime-agent v0.7.0)",
+        "content": "Repo: /home/bench/work/repo (prime-agent v0.7.0). `getApiKeyEnvVars(provider)` in packages/ai/src/env-api-keys.ts has exactly three decision points: two early returns (multi-element arrays) then one flat `envMap` Record lookup returning `envVar ? [envVar] : undefined`. Any provider absent from all three yields `undefined`.\n\nEarly returns (only sources of multi-element arrays):\n- github-copilot -> [\"COPILOT_GITHUB_TOKEN\", \"GH_TOKEN\", \"GITHUB_TOKEN\"]\n- anthropic -> [\"ANTHROPIC_OAUTH_TOKEN\", \"ANTHROPIC_API_KEY\"]\n\nenvMap single-element results:\ngoogle=GEMINI_API_KEY, google-vertex=GOOGLE_CLOUD_API_KEY, openai=OPENAI_API_KEY, azure-openai-responses=AZURE_OPENAI_API_KEY, prime-inference=PRIME_API_KEY, deepseek=DEEPSEEK_API_KEY, xai=XAI_API_KEY, groq=GROQ_API_KEY, cerebras=CEREBRAS_API_KEY, openrouter=OPENROUTER_API_KEY, vercel-ai-gateway=AI_GATEWAY_API_KEY, zai=ZAI_API_KEY, mistral=MISTRAL_API_KEY, minimax=MINIMAX_API_KEY, minimax-cn=MINIMAX_CN_API_KEY, moonshotai=MOONSHOT_API_KEY, moonshotai-cn=MOONSHOT_API_KEY, huggingface=HF_TOKEN, fireworks=FIREWORKS_API_KEY, opencode=OPENCODE_API_KEY, opencode-go=OPENCODE_API_KEY, kimi-coding=KIMI_API_KEY, cloudflare-workers-ai=CLOUDFLARE_API_KEY, cloudflare-ai-gateway=CLOUDFLARE_API_KEY, xiaomi=XIAOMI_API_KEY, xiaomi-token-plan-cn=XIAOMI_TOKEN_PLAN_CN_API_KEY, xiaomi-token-plan-ams=XIAOMI_TOKEN_PLAN_AMS_API_KEY, xiaomi-token-plan-sgp=XIAOMI_TOKEN_PLAN_SGP_API_KEY.\n\nReturns undefined (OAuth/ambient-credential only, omitted from output): amazon-bedrock, openai-codex.\n\nGotchas: env var names do not track provider ids (vercel-ai-gateway -> AI_GATEWAY_API_KEY, huggingface -> HF_TOKEN); some regional variants share a var (moonshotai and moonshotai-cn both MOONSHOT_API_KEY) while others do not (minimax vs minimax-cn); AWS_* and GOOGLE_APPLICATION_CREDENTIALS are read by getEnvApiKey / hasVertexAdcCredentials, NOT returned by getApiKeyEnvVars; PRIME_TEAM_ID belongs to getPrimeTeamId and is not returned either.\n\nKnownProvider union (packages/ai/src/types.ts) has 32 members; 30 map to non-undefined values. Result written to /home/bench/results/matrix.json in union order.",
+        "path": "repo/packages-ai/env-api-keys",
+        "scope": "local",
+        "reference": {},
+        "arguments": {},
+        "metadata": {
+          "scope": "local",
+          "provider_count": 32,
+          "mapped_count": 30,
+          "artifact": "/home/bench/results/matrix.json"
+        },
+        "source": "refine",
+        "created_at": "2026-08-06T12:25:15.972Z",
+        "updated_at": "2026-08-06T12:25:15.972Z",
+        "version": 1
+      }
+    },
+    "skill": {
+      "extract_ts_union_members_and_record_literal_entries_by_text_parsing": {
+        "id": "extract_ts_union_members_and_record_literal_entries_by_text_parsing",
+        "kind": "skill",
+        "title": "Extract TS union members and Record literal entries by text parsing",
+        "content": "For enumerating a large TypeScript string-literal union and cross-referencing it against an object/Record literal, read the .ts files as plain text and regex-parse instead of manually transcribing entries. This was the decisive technique for the getApiKeyEnvVars matrix (32 union members x 28 envMap entries) and eliminates transcription errors.\n\nProcedure:\n1. Slice the union: take source from `export type <Name> =` to the next `;`, then `re.findall(r'\\\"([^\\\"]+)\\\"', slice)` to get members in source order.\n2. Slice the target function body by its declaration and the next sibling doc comment, then slice the literal from `const <mapName>` to the matching `};`.\n3. Extract pairs with `re.findall(r'\\n\\t+\\\"?([A-Za-z0-9\\-_.]+)\\\"?:\\s*\\\"([^\\\"]+)\\\"', block)` — this handles both bare and quoted (hyphenated) keys.\n4. Read remaining control flow (early returns, guards) by eye; only these produce values outside the literal.\n5. Build the result iterating the union list so source order is preserved, and collect a separate `omitted` list for members absent from every branch. Print `omitted` as the correctness check.\n\nCaveats: verify the function body slice does not run past the function's closing brace; confirm the literal has no spread/computed keys or fallthrough before trusting the regex; always sanity-check `len(union) == len(mapped) + len(omitted)`.\n\nRLM-native use: `await ts_union_matrix.extract_union_and_map(...)`.",
+        "path": "repo/skills/ts-source-parse",
+        "scope": "local",
+        "reference": {
+          "type": "python",
+          "import": "re",
+          "callable": "findall",
+          "call_pattern": "members = re.findall(r'\\\"([^\\\"]+)\\\"', src[src.index('export type KnownProvider ='):].split(';')[0]); pairs = re.findall(r'\\n\\t+\\\"?([A-Za-z0-9\\-_.]+)\\\"?:\\s*\\\"([^\\\"]+)\\\"', map_block)"
+        },
+        "arguments": {
+          "source_path": {
+            "type": "string",
+            "required": true,
+            "description": "Absolute path to the .ts file containing the union or the Record literal."
+          },
+          "union_name": {
+            "type": "string",
+            "required": false,
+            "description": "Exported type alias name whose string-literal members should be enumerated, e.g. 'KnownProvider'."
+          },
+          "function_name": {
+            "type": "string",
+            "required": false,
+            "description": "Name of the function whose body contains the target literal, used to bound the slice, e.g. 'getApiKeyEnvVars'."
+          },
+          "map_name": {
+            "type": "string",
+            "required": false,
+            "description": "Identifier of the object/Record literal to parse, e.g. 'envMap'. Defaults to the first const object literal in the sliced body."
+          }
+        },
+        "metadata": {
+          "scope": "local",
+          "validated_on": "packages/ai/src/env-api-keys.ts, packages/ai/src/types.ts"
+        },
+        "source": "refine",
+        "created_at": "2026-08-06T12:25:15.972Z",
+        "updated_at": "2026-08-06T12:25:15.972Z",
+        "version": 1
+      }
+    },
+    "subagent": {}
+  },
+  "refinements": [
+    {
+      "id": "refine_20260806122438379",
+      "trigger": "Persist the completed provider→env-var mapping task result and the reusable source-parsing technique used to derive it.",
+      "changes": [
+        "create memory:getapikeyenvvars_provider_env_var_matrix_prime_agent_v0_7_0",
+        "create skill:extract_ts_union_members_and_record_literal_entries_by_text_parsing"
+      ],
+      "evidence": "The trajectory produced a fully verified, evidence-backed mapping of all 32 KnownProvider members to getApiKeyEnvVars' return values, including the two undefined cases (amazon-bedrock, openai-codex) and the file's structural shape (two early returns + one flat envMap lookup ending in `envVar ? [envVar] : undefined`). These are concrete project facts about /home/bench/work/repo at prime-agent v0.7.0 that would otherwise have to be re-derived if the task is revisited or extended in this session. A skill is also justified: the effective technique was to read the TS source as text and regex-parse the union and the envMap object literal rather than eyeballing 32 entries, which is repeatable for other unions/record literals in this repo.",
+      "outcome": "If this session continues to ask about provider credentials, env var wiring, or re-verification of matrix.json, the answer is available without re-reading env-api-keys.ts. Validate by re-running the skill on the same files and confirming it reproduces the 30-entry mapping and the two omitted providers.",
+      "created_at": "2026-08-06T12:25:15.972Z"
+    }
+  ]
+}

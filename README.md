@@ -265,6 +265,56 @@ Two limits:
 The machinery works, writes accurate notes, almost never runs, and defaults to
 a scope that does not survive.
 
+### Global scope is not reachable from the `/refine` command
+
+Local state dies with the session, so the cross-session claim rests entirely on
+global-scope refinement. The API supports it (`refine({global: true})`) and the
+refinement system prompt describes when to use it.
+
+Both documented-looking invocations were tried:
+
+| Invocation | Parsed as | Resulting scope |
+|---|---|---|
+| `/refine global` | `args:""` | `local` |
+| `/refine --global` | `args:""`, `text:"/refine"` | `local` |
+
+**The slash command discards its arguments.** In both cases the emitted event
+shows `args:""` and the state was written to the session-scoped path. After
+every refine run in this evaluation, `~/.prime/agent/harness/` does not exist,
+and all three `harness_state.json` files that were produced contain only
+`scope: "local"` entries.
+
+So via the CLI, every lesson the harness writes is session-local and dies with
+the session. Global refinement may be reachable programmatically through the
+SDK — that path was not tested.
+
+### Does the state help when it IS present?
+
+The one remaining question: forced refinement demonstrably works, so is the
+resulting state worth anything? Task 4 was written to be directly answerable
+from the structural lesson refine writes during task 3.
+
+| Condition | task-4 tokens | task-4 correct |
+|---|---|---|
+| **Local refine state present** | 47,748 | ✅ |
+| No state (auto-refine on, never fired) | 47,891 | ✅ |
+| No state (auto-refine off) | 46,382 | ✅ |
+| No state (no refine) | 80,080 | ✅ |
+| No state (fresh session) | 69,273 | ✅ |
+| No state (fresh session) | 48,341 | ✅ |
+
+**Every arm answered correctly, so correctness cannot discriminate.** On cost,
+the no-state condition spans 46,382–80,080 tokens (n=5, mean 58,393, sd 13,743).
+The refined run at 47,748 sits at **z = −0.77 — comfortably inside that range**.
+
+A naive read of just the adjacent pair (47,748 vs 80,080) shows a 40% saving.
+That is an artifact of comparing two draws from a distribution whose standard
+deviation is ~24% of its mean. **No benefit is detectable at this sample size.**
+Detecting a 20% effect against this variance would need roughly n≈10 per arm.
+
+This is the third time in this evaluation that an n=1 comparison produced an
+apparent effect that did not survive contact with more data.
+
 ---
 
 ## Incidental: `install.sh` assumes a writable npm prefix
@@ -300,6 +350,10 @@ and does not reproduce the error.
 - **The self-improvement feature did not run at all**, at defaults or when
   configured to be maximally eager, and enabling it produced no measurable
   benefit in a controlled contrast.
+- **When forced to run, its output produced no detectable benefit either** —
+  correctness saturated and the cost difference was inside run-to-run noise.
+- **Global scope is unreachable from the CLI**, so every lesson it writes dies
+  with the session.
 
 The IPython-first design is a real engineering idea and it plausibly explains
 the low turn counts. But on this evidence it is not a general multiplier, and

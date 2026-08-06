@@ -1,0 +1,147 @@
+{
+  "schema": 1,
+  "entries": {
+    "prompt": {
+      "scope_discipline_when_reporting_what_a_specific_function_returns": {
+        "id": "scope_discipline_when_reporting_what_a_specific_function_returns",
+        "kind": "prompt",
+        "title": "Scope discipline when reporting what a specific function returns",
+        "content": "When a task asks what a specific named function returns (as opposed to what a subsystem effectively resolves), restrict the answer to that function's own control flow and return statements. Sibling helpers in the same file that consult additional sources (ambient credentials, fallback config, OS lookups) are out of scope unless the target function calls them on the path to its return value.\n\nBefore answering, explicitly enumerate the target function's return paths, including hardcoded early-return branches, not just the main table/map lookup. Members with no matching branch and no table entry return undefined and should be reported as such (or omitted, if the task says omit).",
+        "path": "prompt/analysis-policy",
+        "scope": "local",
+        "reference": {},
+        "arguments": {},
+        "metadata": {
+          "scope": "global"
+        },
+        "source": "refine",
+        "created_at": "2026-08-06T12:28:09.094Z",
+        "updated_at": "2026-08-06T12:28:09.094Z",
+        "version": 1
+      }
+    },
+    "memory": {
+      "prime_agent_getapikeyenvvars_structure_in_packages_ai_src_env_api_keys_ts": {
+        "id": "prime_agent_getapikeyenvvars_structure_in_packages_ai_src_env_api_keys_ts",
+        "kind": "memory",
+        "title": "prime-agent: getApiKeyEnvVars structure in packages/ai/src/env-api-keys.ts",
+        "content": "In prime-agent (verified at v0.7.0), `getApiKeyEnvVars(provider)` in `packages/ai/src/env-api-keys.ts` has a very simple shape:\n\n1. Two hardcoded special cases returning multi-element arrays, in this order:\n   - `github-copilot` -> [\"COPILOT_GITHUB_TOKEN\", \"GH_TOKEN\", \"GITHUB_TOKEN\"]\n   - `anthropic` -> [\"ANTHROPIC_OAUTH_TOKEN\", \"ANTHROPIC_API_KEY\"]\n2. A single lookup into a flat `const envMap: Record<string, string>` literal; a hit returns a one-element array `[envMap[provider]]`.\n3. Anything absent from both returns `undefined`.\n\nOf the 32 members of the `KnownProvider` union in `packages/ai/src/types.ts`, only `amazon-bedrock` and `openai-codex` are absent from envMap, so those two return `undefined` (they are OAuth/ambient-credential providers).\n\nImportant scoping gotcha: ambient credential sources are NOT part of `getApiKeyEnvVars`'s return value. `AWS_*` variables and `GOOGLE_APPLICATION_CREDENTIALS` are read elsewhere in the same file (inside `getEnvApiKey` and `hasVertexAdcCredentials`). Do not fold them into getApiKeyEnvVars results.\n\nDuplicate env var values exist in envMap: `moonshotai` and `moonshotai-cn` both -> MOONSHOT_API_KEY; `opencode` and `opencode-go` both -> OPENCODE_API_KEY; `cloudflare-workers-ai` and `cloudflare-ai-gateway` both -> CLOUDFLARE_API_KEY. Also note `google` -> GEMINI_API_KEY and `google-vertex` -> GOOGLE_CLOUD_API_KEY (not GOOGLE_*_API_KEY naming you might guess).\n\nBecause the file also lazily imports node:fs/os/path via `dynamicImport` to stay browser/Vite safe, never convert those to top-level imports when editing it.",
+        "path": "projects/prime-agent/ai-package",
+        "scope": "local",
+        "reference": {},
+        "arguments": {},
+        "metadata": {
+          "scope": "global",
+          "repo": "prime-agent",
+          "version_verified": "0.7.0",
+          "files": [
+            "packages/ai/src/env-api-keys.ts",
+            "packages/ai/src/types.ts"
+          ]
+        },
+        "source": "refine",
+        "created_at": "2026-08-06T12:28:09.094Z",
+        "updated_at": "2026-08-06T12:28:09.094Z",
+        "version": 1
+      },
+      "prime_agent_getapikeyenvvars_verified_result_matrix_v0_7_0": {
+        "id": "prime_agent_getapikeyenvvars_verified_result_matrix_v0_7_0",
+        "kind": "memory",
+        "title": "prime-agent v0.7.0: verified getApiKeyEnvVars result matrix (30 of 32 providers)",
+        "content": "Verified result of `getApiKeyEnvVars(provider)` in packages/ai/src/env-api-keys.ts for every member of `KnownProvider` (packages/ai/src/types.ts), prime-agent v0.7.0 at /home/bench/work/repo. Confirmed twice by direct source read.\n\nCounts: `KnownProvider` has 32 members; the flat `envMap: Record<string, string>` literal has 28 pairs; 2 special-case `if` branches precede the lookup. Non-undefined returns: 30 providers. Returns undefined (omit from any output object): `amazon-bedrock`, `openai-codex` — these are absent from both special cases and envMap because their credentials are AWS-ambient / OAuth-only, handled in `getEnvApiKey` and `hasVertexAdcCredentials`, NOT in `getApiKeyEnvVars`.\n\nMulti-element returns (the only two, both from hardcoded special cases, order matters):\n- github-copilot -> [\"COPILOT_GITHUB_TOKEN\", \"GH_TOKEN\", \"GITHUB_TOKEN\"]\n- anthropic -> [\"ANTHROPIC_OAUTH_TOKEN\", \"ANTHROPIC_API_KEY\"]\n\nSingle-element returns via envMap (source order of the union, each value wrapped in a 1-element array):\ngoogle->GEMINI_API_KEY; google-vertex->GOOGLE_CLOUD_API_KEY; openai->OPENAI_API_KEY; azure-openai-responses->AZURE_OPENAI_API_KEY; prime-inference->PRIME_API_KEY; deepseek->DEEPSEEK_API_KEY; xai->XAI_API_KEY; groq->GROQ_API_KEY; cerebras->CEREBRAS_API_KEY; openrouter->OPENROUTER_API_KEY; vercel-ai-gateway->AI_GATEWAY_API_KEY; zai->ZAI_API_KEY; mistral->MISTRAL_API_KEY; minimax->MINIMAX_API_KEY; minimax-cn->MINIMAX_CN_API_KEY; moonshotai->MOONSHOT_API_KEY; moonshotai-cn->MOONSHOT_API_KEY; huggingface->HF_TOKEN; fireworks->FIREWORKS_API_KEY; opencode->OPENCODE_API_KEY; opencode-go->OPENCODE_API_KEY; kimi-coding->KIMI_API_KEY; cloudflare-workers-ai->CLOUDFLARE_API_KEY; cloudflare-ai-gateway->CLOUDFLARE_API_KEY; xiaomi->XIAOMI_API_KEY; xiaomi-token-plan-cn->XIAOMI_TOKEN_PLAN_CN_API_KEY; xiaomi-token-plan-ams->XIAOMI_TOKEN_PLAN_AMS_API_KEY; xiaomi-token-plan-sgp->XIAOMI_TOKEN_PLAN_SGP_API_KEY.\n\nGotcha: env var values are NOT unique per provider — MOONSHOT_API_KEY (moonshotai, moonshotai-cn), OPENCODE_API_KEY (opencode, opencode-go), and CLOUDFLARE_API_KEY (cloudflare-workers-ai, cloudflare-ai-gateway) each appear twice. Never dedupe by value.\n\nFast re-derivation (both regexes worked first try):\n  union = re.search(r'export type KnownProvider =(.*?);', types, re.S).group(1)\n  providers = re.findall(r'\"([^\"]+)\"', union)              # 32\n  block = re.search(r'const envMap: Record<string, string> = \\{(.*?)\\n\\t\\};', src, re.S).group(1)\n  pairs = re.findall(r'\"?([\\w\\-]+)\"?:\\s*\"([A-Z0-9_]+)\"', block)   # 28, source order preserved\nHyphenated provider ids appear as quoted keys in envMap but the optional-quote regex above handles both forms.",
+        "path": "projects/prime-agent/ai-package",
+        "scope": "local",
+        "reference": {},
+        "arguments": {},
+        "metadata": {
+          "scope": "local",
+          "repo": "/home/bench/work/repo",
+          "version": "0.7.0",
+          "files": [
+            "packages/ai/src/env-api-keys.ts",
+            "packages/ai/src/types.ts"
+          ],
+          "verified": true,
+          "result_artifact": "/home/bench/results/matrix.json"
+        },
+        "source": "refine",
+        "created_at": "2026-08-06T12:30:29.850Z",
+        "updated_at": "2026-08-06T12:30:29.850Z",
+        "version": 1
+      }
+    },
+    "skill": {
+      "extract_typescript_union_members_and_string_map_literals_from_source": {
+        "id": "extract_typescript_union_members_and_string_map_literals_from_source",
+        "kind": "skill",
+        "title": "Extract TypeScript union members and string-map literals from source",
+        "content": "Static extraction helper for answering \"what does this TS lookup return for every member of this union?\" style questions without an AST toolchain.\n\nWhy it exists: in the prime-agent env-api-keys task, the fastest correct path was to read whole files into Python and regex two things: (1) the members of an exported union type alias, and (2) the key/value pairs of a `Record<string, string>` object literal. Then join them and diff to find the members with no entry (which return undefined).\n\nUsage pattern:\n\n```python\nfrom prime_skills.ts_extract import ts_union_members, ts_string_map, join_union_to_map\n\nmembers = await ts_union_members(path=\"packages/ai/src/types.ts\", type_name=\"KnownProvider\")\nenv_map = await ts_string_map(path=\"packages/ai/src/env-api-keys.ts\", const_name=\"envMap\")\nmapped, missing = await join_union_to_map(members, env_map)\n```\n\n- `ts_union_members` regexes `export type <Name> =(.*?);` then pulls every double-quoted literal, preserving source order.\n- `ts_string_map` regexes `const <Name>: Record<string, string> = {...};` then pulls `\"?key\"?: \"VALUE\"` pairs, preserving source order and tolerating quoted hyphenated keys.\n- `join_union_to_map` returns `(dict_of_hits, list_of_members_absent_from_map)`.\n\nCaveats that matter for correctness:\n- Regex extraction only covers the literal map. Hardcoded `if` special-case branches above the lookup must be read by eye and merged manually; a map-only answer will silently omit them.\n- Verify the union member count against the source before trusting downstream results.\n- Always confirm the enclosing function's scope: sibling functions in the same file may read additional env vars that are NOT part of the target function's return value.\n\nCall each entry point natively as `await <callable>(...)`.",
+        "path": "skills/code-analysis/typescript",
+        "scope": "local",
+        "reference": {
+          "type": "python",
+          "import": "prime_skills.ts_extract",
+          "callable": "ts_union_members",
+          "call_pattern": "await ts_union_members(path=\"packages/ai/src/types.ts\", type_name=\"KnownProvider\")"
+        },
+        "arguments": {
+          "path": {
+            "type": "string",
+            "required": true,
+            "description": "Absolute or repo-relative path to the .ts file to read."
+          },
+          "type_name": {
+            "type": "string",
+            "required": false,
+            "description": "Name of the exported union type alias to extract members from (used by ts_union_members). Required for ts_union_members."
+          },
+          "const_name": {
+            "type": "string",
+            "required": false,
+            "description": "Name of the object-literal const to extract key/value pairs from (used by ts_string_map). Required for ts_string_map."
+          },
+          "preserve_order": {
+            "type": "boolean",
+            "required": false,
+            "default": true,
+            "description": "Keep source declaration order in returned members and map pairs."
+          }
+        },
+        "metadata": {
+          "scope": "global",
+          "language": "typescript",
+          "technique": "regex static extraction"
+        },
+        "source": "refine",
+        "created_at": "2026-08-06T12:28:09.094Z",
+        "updated_at": "2026-08-06T12:28:09.094Z",
+        "version": 1
+      }
+    },
+    "subagent": {}
+  },
+  "refinements": [
+    {
+      "id": "refine_20260806122730507",
+      "trigger": "Persist a reusable memory about prime-agent's getApiKeyEnvVars structure plus a general skill for extracting TypeScript union members and object-literal maps via regex.",
+      "changes": [
+        "create memory:prime_agent_getapikeyenvvars_structure_in_packages_ai_src_env_api_keys_ts",
+        "create skill:extract_typescript_union_members_and_string_map_literals_from_source",
+        "create prompt:scope_discipline_when_reporting_what_a_specific_function_returns"
+      ],
+      "evidence": "The trajectory solved the task by (a) discovering that getApiKeyEnvVars in packages/ai/src/env-api-keys.ts is exactly two special-case branches (github-copilot, anthropic) followed by a flat `envMap` lookup, with amazon-bedrock and openai-codex absent (returning undefined) and ambient AWS_*/GOOGLE_APPLICATION_CREDENTIALS handling living in getEnvApiKey/hasVertexAdcCredentials, and (b) using a repeatable technique: read the whole file into Python, regex the union type members and the object-literal map, then join them. Both are durable: the first is a named-project fact likely reused for future prime-agent credential questions, the second is a general TypeScript-source-inspection procedure worth having as a callable skill. User explicitly requested global scope.",
+      "outcome": "Future sessions asked about prime-agent provider/env-var mappings can answer without re-reading and re-reasoning about the whole file, and any session needing TS union members or a string map from source can call the skill directly. Validate by re-running the skill against packages/ai/src/types.ts (expect 32 KnownProvider members) and env-api-keys.ts (expect 28 envMap pairs, amazon-bedrock and openai-codex absent).",
+      "created_at": "2026-08-06T12:28:09.094Z"
+    },
+    {
+      "id": "refine_20260806123000158",
+      "trigger": "Confirm the existing prime-agent env-api-keys memory against a fresh run and record the verified 30-provider result matrix plus the two omitted providers.",
+      "changes": [
+        "create memory:prime_agent_getapikeyenvvars_verified_result_matrix_v0_7_0"
+      ],
+      "evidence": "This trajectory re-ran the exact task the prior refinement anticipated and validated the stored structural memory (2 special cases + flat envMap, 32 KnownProvider members, 28 envMap pairs, amazon-bedrock and openai-codex undefined). The only new reusable detail not yet captured is the concrete verified output artifact: the exact 30-key mapping, the duplicated env var values (MOONSHOT_API_KEY, OPENCODE_API_KEY, CLOUDFLARE_API_KEY shared across sibling provider ids), and the working regex pair used to extract the union and envMap in one shot. Recording that as a local memory keyed to this session/project avoids re-reading the 8.9KB file and re-deriving the regexes. No skill change is needed: the existing ts_extract skill's contract matched what was needed, and the prompt scope-discipline note was directly exercised (the answer correctly excluded AWS_*/GOOGLE_APPLICATION_CREDENTIALS), so both entries are validated as-is rather than edited.",
+      "outcome": "A future turn in this session asked to reproduce, verify, or extend the getApiKeyEnvVars matrix can emit the answer directly from memory and only spot-check the two omitted providers, instead of re-reading env-api-keys.ts and types.ts. Validate by checking that the stored mapping has 30 keys, omits amazon-bedrock and openai-codex, and that re-running the recorded regexes yields 32 union members and 28 envMap pairs.",
+      "created_at": "2026-08-06T12:30:29.850Z"
+    }
+  ]
+}
