@@ -10,11 +10,13 @@ prompt — when the prompt is disambiguated and rerun, **both conditions score
 100%** and the difference disappears entirely.
 
 Separately: the "continual harness" and `rlm()` subagents — the two
-differentiating features — **both fail silently under `-p` (single-shot) mode
-and both work correctly in an interactive session.** That was established by
-controlled test, not inferred. Under `-p` the harness never refines at any
-threshold, and delegated subagents die uncollected leaving no output while the
-run reports success.
+differentiating features — **both fail silently under `-p` (single-shot) mode,
+and both work correctly in interactive *and* daemon sessions.** Established by
+controlled test across all three modes. The cause is one thing: both are
+post-turn asynchronous operations, and `-p` kills the process at end of turn
+before they can run. Under `-p` the harness never refines at any threshold, and
+delegated subagents die mid-flight leaving no output while the run exits
+reporting success.
 
 The token overhead does not depend on mode, and it is larger on a weaker model:
 on `claude-sonnet-5` the harness used **3–7x the baseline's tokens** across
@@ -504,8 +506,43 @@ statement is narrower and fairer than "they don't work":
 > and in the subagent case the run exits reporting success having written
 > nothing.
 
-Daemon mode (`prime-agent send` / `attach`) was not tested and may behave like
-the interactive case.
+### Daemon mode behaves like interactive — only `-p` is broken
+
+Daemon mode was then tested as a third arm, to complete the matrix. Method: boot
+a session through a PTY, **kill the client**, confirm the session survives with
+no client attached, then drive it purely through `prime-agent send`.
+
+| Feature | `-p` single-shot | Interactive PTY | Daemon (no client) |
+|---|---|---|---|
+| auto-refine (`turnInterval: 1`) | **never fires** | fires | **fires** |
+| `rlm()` subagents | **die uncollected, no output** | collected, 16/16 | **collected, 15/16** |
+
+Both daemon runs completed their tasks correctly (task 3: 30/30; task 4: exact;
+the delegated task-6 run scored 15/16, missing only
+`coding-agent.exported_functions` by one — 752 against 753).
+
+**So the defect is specific to `-p`, not to non-interactive use in general.** A
+daemon-backed session with zero clients attached — genuinely unattended,
+scriptable via `prime-agent send` — runs both features correctly.
+
+*Methodological note: the first daemon reading recorded "auto-refine did not
+fire." That was a race in the test harness, not a result — the state file was
+written at 17:44:40, seconds after the check. The `-p` conclusion is not subject
+to the same error: those sessions were re-inspected hours later and still have a
+`kernel-state` file with no `harness` directory at all, because the process
+exits before any post-turn work can run.*
+
+### The mechanism
+
+This explains both failures with one cause. Auto-refine and subagent collection
+are **post-turn asynchronous operations**. `-p` terminates the process at end of
+turn, which cancels them: the refine pass never writes, and the spawned children
+are killed mid-flight (7 events each, against 13 when they are allowed to
+finish). Interactive and daemon sessions outlive the turn, so both complete.
+
+The practical consequence is unchanged and still worth stating plainly: **under
+`-p` both failures are silent.** No warning, no error, and in the subagent case
+the run exits reporting success having written nothing.
 
 ---
 
@@ -558,7 +595,43 @@ Task 2 is rubric-scored and has no answer key, so it needed no control.
 
 ---
 
-## Incidental: `install.sh` assumes a writable npm prefix
+## What the paper actually claims — and why this evaluation does not test it
+
+Earlier versions of this document repeatedly disclaimed
+[arXiv 2605.09998](https://arxiv.org/abs/2605.09998) as "not reviewed here."
+It has now been read, and it changes how these results should be framed.
+
+**"Continual Harness: Online Adaptation for Self-Improving Foundation Agents"**
+(Karten, Zhang, Upaa, Feng, Li, Shi, Jin, Vodrahalli) evaluates **Pokémon
+game-playing** — Red, Emerald, Blue, Yellow Legacy, and Crystal. The headline
+metric is **button-press cost**: the harness "substantially reduces button-press
+cost relative to the minimalist baseline and recovers a majority of the gap to a
+hand-engineered expert harness." It also reports being the first system to
+complete Pokémon Blue, Yellow Legacy on hard mode, and Crystal without a lost
+battle. Beyond the harness itself it adds an online process-reward co-learning
+loop that updates an open-source model from rollouts relabelled by a frontier
+teacher.
+
+There are **no claims about coding, software engineering, repository
+navigation, or knowledge work anywhere in it.**
+
+Three consequences for reading this document:
+
+1. **These results do not contradict the paper.** Different domain, different
+   metric, different time horizon. Nothing here is a failed reproduction,
+   because no reproduction was attempted.
+2. **The 25-turn auto-refine default makes sense in its native setting.** A
+   Pokémon run is thousands of actions long; refining every 25 turns is
+   frequent *there*. Calling the interval "too high" is only fair relative to
+   5-to-13-turn coding tasks — which is a statement about fit to my use case,
+   not a design defect. Result 3 should be read that way.
+3. **What is being evaluated here is the shipped coding agent**, on the tasks
+   its users would actually run, not the research system on its own benchmark.
+   That is a legitimate question and it is the one this document answers — but
+   it is a narrower question than "does the Continual Harness work."
+
+The paper's own claims remain untested here, and testing them would require a
+Pokémon emulator harness and the button-press metric, not a git repository.
 
 With Node already present, the installer correctly skips its sudo path — the
 only sudo callers are in `install_node_npm_interactive()`, reached only when the
@@ -601,8 +674,10 @@ and does not reproduce the error.
 - **Subagents spawn but are never collected in `-p` mode.** Instructed to
   delegate, the agent followed the documented spawn-and-end-turn pattern and
   produced no output at all — a silent total failure, twice.
-- **Both differentiating features assume a long-lived session** and neither
-  functions in single-shot non-interactive use.
+- **Both features work in interactive and daemon sessions.** The defect is
+  specific to `-p`, which terminates the process before these post-turn
+  asynchronous operations can run. Unattended scripted use is fine via
+  `prime-agent send`; `-p` is the broken path.
 
 The IPython-first design is a real engineering idea and it plausibly explains
 the low turn counts. But on this evidence it is not a general multiplier, and
@@ -623,6 +698,9 @@ the feature the project is named around did not run.
   earlier tasks were not re-run under that control. Their scoring is
   exact-match against a key the agent could in principle have read; no evidence
   of that was found, but it was not excluded by construction.
+- **The paper this system is built on evaluates a different domain entirely.**
+  See "What the paper actually claims" below. This evaluation neither
+  reproduces nor contradicts it.
 - **The repository makes no agent-capability or benchmark-score claims.**
   Nothing in the README or `packages/coding-agent/docs/` names a benchmark suite
   or reports a task-performance number, so there was no published figure to

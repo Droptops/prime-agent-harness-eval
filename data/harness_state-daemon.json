@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "entries": {
+    "prompt": {},
+    "memory": {
+      "prime_agent_v0_7_0_getapikeyenvvars_resolved_provider_env_var_matrix_session_wor": {
+        "id": "prime_agent_v0_7_0_getapikeyenvvars_resolved_provider_env_var_matrix_session_wor",
+        "kind": "memory",
+        "title": "prime-agent v0.7.0: getApiKeyEnvVars resolved provider→env-var matrix (session working data)",
+        "content": "Repo: /home/bench/work/repo (prime-agent v0.7.0).\n\nSTRUCTURE of `getApiKeyEnvVars(provider)` in packages/ai/src/env-api-keys.ts — exactly three sources, in order:\n1. early special case: provider === \"github-copilot\" -> [\"COPILOT_GITHUB_TOKEN\", \"GH_TOKEN\", \"GITHUB_TOKEN\"]\n2. early special case: provider === \"anthropic\" -> [\"ANTHROPIC_OAUTH_TOKEN\", \"ANTHROPIC_API_KEY\"]\n3. flat `envMap` object lookup: returns [envVar] if present, else undefined.\nOnly the two special cases return multi-element arrays. Hyphenated provider keys are quoted in envMap. Env var names need not match provider names, and the same env var may repeat across providers.\n\nSCOPING CAVEAT: AWS_* variables and GOOGLE_APPLICATION_CREDENTIALS / ADC logic live in `getEnvApiKey` and `hasVertexAdcCredentials`, NOT in `getApiKeyEnvVars`. Do not include them in getApiKeyEnvVars results.\n\nKnownProvider union in packages/ai/src/types.ts has 32 members, source order:\namazon-bedrock, anthropic, google, google-vertex, openai, azure-openai-responses, openai-codex, prime-inference, deepseek, github-copilot, xai, groq, cerebras, openrouter, vercel-ai-gateway, zai, mistral, minimax, minimax-cn, moonshotai, moonshotai-cn, huggingface, fireworks, opencode, opencode-go, kimi-coding, cloudflare-workers-ai, cloudflare-ai-gateway, xiaomi, xiaomi-token-plan-cn, xiaomi-token-plan-ams, xiaomi-token-plan-sgp.\n\nRETURNS undefined (omitted from results): amazon-bedrock, openai-codex. => 30 providers with non-undefined returns.\n\nRESOLVED MAPPING (written to /home/bench/results/matrix.json, union order):\nanthropic: [ANTHROPIC_OAUTH_TOKEN, ANTHROPIC_API_KEY]\ngoogle: [GEMINI_API_KEY]\ngoogle-vertex: [GOOGLE_CLOUD_API_KEY]\nopenai: [OPENAI_API_KEY]\nazure-openai-responses: [AZURE_OPENAI_API_KEY]\nprime-inference: [PRIME_API_KEY]\ndeepseek: [DEEPSEEK_API_KEY]\ngithub-copilot: [COPILOT_GITHUB_TOKEN, GH_TOKEN, GITHUB_TOKEN]\nxai: [XAI_API_KEY]\ngroq: [GROQ_API_KEY]\ncerebras: [CEREBRAS_API_KEY]\nopenrouter: [OPENROUTER_API_KEY]\nvercel-ai-gateway: [AI_GATEWAY_API_KEY]\nzai: [ZAI_API_KEY]\nmistral: [MISTRAL_API_KEY]\nminimax: [MINIMAX_API_KEY]\nminimax-cn: [MINIMAX_CN_API_KEY]\nmoonshotai: [MOONSHOT_API_KEY]\nmoonshotai-cn: [MOONSHOT_API_KEY]\nhuggingface: [HF_TOKEN]\nfireworks: [FIREWORKS_API_KEY]\nopencode: [OPENCODE_API_KEY]\nopencode-go: [OPENCODE_API_KEY]\nkimi-coding: [KIMI_API_KEY]\ncloudflare-workers-ai: [CLOUDFLARE_API_KEY]\ncloudflare-ai-gateway: [CLOUDFLARE_API_KEY]\nxiaomi: [XIAOMI_API_KEY]\nxiaomi-token-plan-cn: [XIAOMI_TOKEN_PLAN_CN_API_KEY]\nxiaomi-token-plan-ams: [XIAOMI_TOKEN_PLAN_AMS_API_KEY]\nxiaomi-token-plan-sgp: [XIAOMI_TOKEN_PLAN_SGP_API_KEY]\n\nSHARED env vars among single-element returns (written to /home/bench/results/shared.json):\nCLOUDFLARE_API_KEY: [cloudflare-ai-gateway, cloudflare-workers-ai]\nMOONSHOT_API_KEY: [moonshotai, moonshotai-cn]\nOPENCODE_API_KEY: [opencode, opencode-go]\n\nArtifacts already produced this session: /home/bench/results/matrix.json, /home/bench/results/shared.json (both plain JSON objects, no prose, indent=2).",
+        "path": "repo/prime-agent-0.7.0/packages/ai/env-api-keys",
+        "scope": "local",
+        "reference": {},
+        "arguments": {},
+        "metadata": {
+          "scope": "local",
+          "repo": "/home/bench/work/repo",
+          "version": "prime-agent v0.7.0",
+          "files": [
+            "packages/ai/src/env-api-keys.ts",
+            "packages/ai/src/types.ts"
+          ],
+          "artifacts": [
+            "/home/bench/results/matrix.json",
+            "/home/bench/results/shared.json"
+          ]
+        },
+        "source": "refine",
+        "created_at": "2026-08-06T17:44:40.701Z",
+        "updated_at": "2026-08-06T17:44:40.701Z",
+        "version": 1
+      }
+    },
+    "skill": {},
+    "subagent": {}
+  },
+  "refinements": [
+    {
+      "id": "refine_20260806174414679",
+      "trigger": "Persist the resolved getApiKeyEnvVars provider→env-var mapping and file structure notes locally so follow-up questions in this session need no re-parsing.",
+      "changes": [
+        "create memory:prime_agent_v0_7_0_getapikeyenvvars_resolved_provider_env_var_matrix_session_wor"
+      ],
+      "evidence": "The requesting agent has already issued two dependent queries in a row against the same two files, and the second turn reused the in-memory `out` mapping from the first. Capturing the derived fact base (function structure, 30-entry mapping, the two undefined providers, union order/size, scoping caveat, and shared env names) locally removes the need to re-read/re-parse env-api-keys.ts and types.ts on each further follow-up. This is repo- and version-specific working data for the current run, so it stays local.",
+      "outcome": "A third follow-up question about getApiKeyEnvVars (e.g. counts, inverse mapping, per-provider spot checks) can be answered directly from the memory note without re-reading source files; validate by checking that the recorded mapping matches /home/bench/results/matrix.json and /home/bench/results/shared.json.",
+      "created_at": "2026-08-06T17:44:40.701Z"
+    }
+  ]
+}
