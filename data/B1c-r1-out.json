@@ -1,0 +1,42 @@
+{
+  "provider_count": 32,
+  "providers": [
+    "amazon-bedrock",
+    "anthropic",
+    "azure-openai-responses",
+    "cerebras",
+    "cloudflare-ai-gateway",
+    "cloudflare-workers-ai",
+    "deepseek",
+    "fireworks",
+    "github-copilot",
+    "google",
+    "google-vertex",
+    "groq",
+    "huggingface",
+    "kimi-coding",
+    "minimax",
+    "minimax-cn",
+    "mistral",
+    "moonshotai",
+    "moonshotai-cn",
+    "openai",
+    "openai-codex",
+    "opencode",
+    "opencode-go",
+    "openrouter",
+    "prime-inference",
+    "vercel-ai-gateway",
+    "xai",
+    "xiaomi",
+    "xiaomi-token-plan-ams",
+    "xiaomi-token-plan-cn",
+    "xiaomi-token-plan-sgp",
+    "zai"
+  ],
+  "models_generated_loc": 20400,
+  "largest_source_file": {
+    "path": "packages/ai/src/models.generated.ts",
+    "loc": 20400
+  }
+}

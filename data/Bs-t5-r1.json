@@ -1,0 +1,17 @@
+{
+  "condition": "B-baseline",
+  "model": "claude-sonnet-5",
+  "task": "/home/bench/prompts/task5-bigdata.txt",
+  "wall_seconds": 25.08,
+  "turns": 6,
+  "tokens": {
+    "input": 11,
+    "output": 2382,
+    "cache_read": 17456,
+    "cache_write": 5766
+  },
+  "total_tokens": 25615,
+  "cost_usd": 0.0626,
+  "stop_reason": "end_turn",
+  "final_text": "32 top-level providers matches the \"providers_with_models\" count, and total_models (1162) equals the count of `satisfies Model<...>` occurrences found earlier, confirming correctness. The result has been written to /home/bench/results/bigdata.json:\n\n```json\n{\"total_models\":1162,\"providers_with_models\":32,\"provider_with_most_models\":{\"provider\":\"openrouter\",\"count\":272},\"largest_context_window\":{\"id\":\"us.meta.llama4-scout-17b-instruct-v1:0\",\"contextWindow\":3500000},\"reasoning_true_count\":890,\"mean_output_cost\":12.7267}\n```"
+}

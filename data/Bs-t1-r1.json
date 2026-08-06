@@ -1,0 +1,17 @@
+{
+  "condition": "B-baseline",
+  "model": "claude-sonnet-5",
+  "task": "/home/bench/prompts/task1-repo-nav.txt",
+  "wall_seconds": 49.94,
+  "turns": 11,
+  "tokens": {
+    "input": 21,
+    "output": 2573,
+    "cache_read": 38241,
+    "cache_write": 6485
+  },
+  "total_tokens": 47320,
+  "cost_usd": 0.0744,
+  "stop_reason": "end_turn",
+  "final_text": "The JSON file is valid and correctly written to /home/bench/results/answer.json with:\n\n- **provider_count**: 32\n- **providers**: All 32 `KnownProvider` union members, sorted alphabetically\n- **models_generated_loc**: 20400 (line count of `packages/ai/src/models.generated.ts`)\n- **largest_source_file**: `packages/ai/src/models.generated.ts` with 20400 lines (confirmed as the largest among all `.ts` files under `packages/*/src/`, next largest being `agent-session.ts` at 11188 lines)"
+}

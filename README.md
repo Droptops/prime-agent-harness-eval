@@ -9,10 +9,16 @@ one apparent quality win for the harness turned out to be an ambiguity in my own
 prompt — when the prompt is disambiguated and rerun, **both conditions score
 100%** and the difference disappears entirely.
 
-Separately, and more definitively: the "continual harness" self-improvement
-feature **never fired in any of five sessions**, including two configured to be
-maximally eager (`turnInterval: 3`, `cooldownMs: 0`). A controlled ON/OFF
-contrast found no difference in cost or correctness.
+Separately: the "continual harness" and `rlm()` subagents — the two
+differentiating features — **both fail silently under `-p` (single-shot) mode
+and both work correctly in an interactive session.** That was established by
+controlled test, not inferred. Under `-p` the harness never refines at any
+threshold, and delegated subagents die uncollected leaving no output while the
+run reports success.
+
+The token overhead does not depend on mode, and it is larger on a weaker model:
+on `claude-sonnet-5` the harness used **3–7x the baseline's tokens** across
+three tasks for identical, fully-correct output.
 
 This document was adversarially verified before publication; the verification
 overturned several of its own earlier conclusions. Those are marked below.
@@ -146,9 +152,21 @@ members. Then both conditions were rerun.
 | baseline v2 r1 | **30/30, exact match** |
 | baseline v2 r2 | **30/30, exact match** |
 
-All four runs produced byte-identical output equal to the answer key. Across all
-12 task-3 runs (v1 and v2), the response space contains no within-reading
-variance: a run is either exactly right or takes the one alternative reading.
+All four runs produced **semantically identical** JSON equal to the answer key
+(three are byte-identical to each other; one differs only in array formatting,
+and all differ from the key file in key ordering). Across all 12 task-3 runs
+(v1 and v2), the response space contains no within-reading variance: a run is
+either exactly right or takes the one alternative reading.
+
+Two caveats. First, these four v2 runs had the answer key readable in
+`/home/bench/results`; the A-condition transcripts contain no reference to it,
+but `baseline.py` ships no transcript so the B rows cannot be audited from
+artifacts. **They were therefore re-run with every key removed from the
+container — all four again scored 30/30 exact** (see Contamination control
+below). Second, "the difference vanishes" is partly definitional: the v2 prompt
+explicitly names the AWS/ADC exclusion that the v1 runs disagreed about. That is
+legitimate scoping of an ambiguous question, not a capability measurement, and
+should be read as such.
 
 **Conclusion for Result 2: there is no quality difference on this task.** The
 v1 result measured which reading each condition picked on an ambiguous prompt
@@ -185,7 +203,9 @@ Observed assistant turns:
 
 **No run came within a factor of two of the threshold.** After every run:
 
-- exactly zero `harness_state.json` files existed anywhere on the filesystem
+- no `harness_state.json` was created by any run itself (the single file present
+  in this group was written by a *manual* `/refine` issued in the task-3 session
+  after that task had finished)
 - zero refine activity in the logs
 - no `settings.json` anywhere in the container, so every default applied
 
@@ -271,22 +291,35 @@ Local state dies with the session, so the cross-session claim rests entirely on
 global-scope refinement. The API supports it (`refine({global: true})`) and the
 refinement system prompt describes when to use it.
 
-Both documented-looking invocations were tried:
+| Invocation | Parsed as | Requested scope | Scope actually written |
+|---|---|---|---|
+| `/refine` | `args:""` | — | `local` |
+| `/refine global` | `args:"global"` | `metadata.scope:"global"` on every new entry | `local` |
+| `/refine --global` | `args:""` | — | `local` |
 
-| Invocation | Parsed as | Resulting scope |
-|---|---|---|
-| `/refine global` | `args:""` | `local` |
-| `/refine --global` | `args:""`, `text:"/refine"` | `local` |
+**The argument is not discarded — the write path ignores it.** `/refine global`
+parses cleanly to `args:"global"`, and the instruction demonstrably reaches the
+refinement pass: every entry that pass created carries
+`metadata.scope: "global"`, where a plain `/refine` in the same session produces
+`metadata.scope: "local"`. But the *effective* `scope` field on each entry is
+still written `local`, `refine_complete.scope` reports `local`, and
+`harnessStatePath` points into the per-session
+`session-artifacts/<id>/harness/` directory. `~/.prime/agent/harness/` is never
+created.
 
-**The slash command discards its arguments.** In both cases the emitted event
-shows `args:""` and the state was written to the session-scoped path. After
-every refine run in this evaluation, `~/.prime/agent/harness/` does not exist,
-and all three `harness_state.json` files that were produced contain only
-`scope: "local"` entries.
+(The `--global` flag form genuinely is discarded — it parses to `args:""`. Only
+the bare word reaches the pass.)
 
-So via the CLI, every lesson the harness writes is session-local and dies with
-the session. Global refinement may be reachable programmatically through the
-SDK — that path was not tested.
+So the correct statement is stronger than "the CLI drops the flag": **the
+request for global scope is accepted, recorded in metadata, and then not
+honoured by the write path.** Every lesson the harness writes via the CLI is
+session-local and dies with the session. Whether the SDK's
+`refine({global: true})` behaves differently was not tested.
+
+*Correction: an earlier version of this document claimed `/refine global`
+parsed to `args:""` and that the slash command "discards its arguments." That
+was wrong — it conflated the bare-word form with the `--global` form. Found by
+adversarial review.*
 
 ### Does the state help when it IS present?
 
@@ -347,23 +380,37 @@ Node, then aggregated — keeping bulk data out of its context just as effective
 On the task designed specifically to expose the harness's structural advantage,
 that advantage did not appear.
 
-### A contamination scare, and why these are the numbers reported
+### An earlier pass, discarded out of caution — and a failed manipulation
 
-An earlier pass of this task recorded far lower baseline usage (30,883 and
-19,036 tokens). That pass is **discarded**. The baseline's sandbox root had been
-widened to `/home/bench` to fix an earlier handicap, and the answer key
-(`truth-task5.json`) sat in `/home/bench/results` — readable, and `bash` is not
-constrained by the sandbox check at all.
+An earlier pass recorded much lower baseline usage (30,883 and 19,036 tokens;
+mean ≈25k against ≈50k for the runs reported above). That pass is **discarded**:
+the baseline's sandbox root had been widened to `/home/bench` to fix an earlier
+handicap, the answer key sat in `/home/bench/results`, and `bash` is not
+constrained by the sandbox check at all. The exposure was real, so the later
+runs are the ones reported.
 
-The baseline's own account described an independent derivation, and it reported
-1,122 nonzero-cost models and 40 zero-cost — neither figure appears in the
-answer key, which holds only the six result fields. So the narrative evidence
-pointed to a genuine solve.
+**What cannot be claimed is that removing the key caused the difference.** The
+re-run was not a clean manipulation, for three reasons:
 
-The numbers disagreed. With the answer key physically removed from the
-container, baseline usage roughly doubled (≈25k → ≈50k mean). The runs reported
-above are the clean ones. **Narrative plausibility is not evidence; removing the
-artifact and re-running is.**
+- The run scripts delete only `bigdata.json` between runs. Four earlier
+  per-run outputs (`Bbig-r1/r2-out.json`, `Abig-r1/r2-out.json`) — each
+  byte-identical to the answer key — remained in `/home/bench/results`
+  throughout the supposedly clean pass, timestamped 12:42–12:44 against clean
+  runs at 12:47–12:49. The answer was still on disk, four times over.
+- prime-agent, never suspected of contamination and with zero references to any
+  key in its transcripts, rose across the same boundary (mean 77.5k → 93.4k)
+  and spans 68,866–101,678 within one condition — a 1.48x internal spread.
+- `baseline.py` records no tool trace, only aggregate metrics and final text.
+  Nothing in the artifacts can establish what either condition read.
+
+So the honest reading is: the earlier pass had a real exposure and is discarded
+on that basis; the token shift between passes is **not** evidence of
+contamination and is consistent with ordinary run-to-run variance.
+
+*Correction: an earlier version of this document presented the doubling as
+demonstrating contamination, under the heading "narrative plausibility is not
+evidence." The irony is noted — that claim was itself a plausible narrative not
+supported by the artifacts. Found by adversarial review.*
 
 ---
 
@@ -421,8 +468,93 @@ features both assume a long-lived session:
 Neither is broken in itself: forced `/refine` writes accurate state, and `rlm()`
 genuinely creates children. Both are unusable in single-shot non-interactive
 invocation — which is how you would drive an agent from a script, a CI job, or
-any automated pipeline. Interactive and daemon modes were not tested here and
-may well behave differently; that is the natural next experiment.
+any automated pipeline.
+
+### Confirmed by controlled test: both features work interactively
+
+The obvious objection is that `-p` is the wrong mode to judge these features in.
+That objection is correct, and it was tested rather than assumed.
+
+A real interactive session was driven through a PTY (no tmux in the image), with
+identical model, prompts, and settings, differing from the `-p` runs *only* in
+session mode:
+
+| Feature | `-p` single-shot | Interactive PTY |
+|---|---|---|
+| auto-refine, `turnInterval: 1`, `cooldownMs: 0` | **did not fire** | **fired** — new `harness_state.json` written |
+| `rlm()` subagents, must-delegate prompt | **died uncollected, no output** | **collected — 16/16 correct** |
+
+The auto-refine result is a clean control: same settings file, same prompt, same
+model; the `-p` run completed 4 assistant turns against a threshold of 1 and
+still produced no harness directory, while the interactive session produced one.
+**Session mode is the differentiator, not the threshold.**
+
+The subagent contrast is equally sharp. In `-p` the four children logged 7
+events each and died. Interactively, four children logged **13 events each**,
+the parent transcript shows **6 `agent_message` exchanges**, and the assembled
+answer scored **16/16**.
+
+**So the features are not broken — they are mode-dependent.** The correct
+statement is narrower and fairer than "they don't work":
+
+> prime-agent's continual harness and subagent delegation both require a
+> long-lived session. They function correctly in interactive use and fail
+> silently under `-p`, which is the mode you would use to drive the agent from
+> a script or CI job. The failure is silent in both cases: no warning, no error,
+> and in the subagent case the run exits reporting success having written
+> nothing.
+
+Daemon mode (`prime-agent send` / `attach`) was not tested and may behave like
+the interactive case.
+
+---
+
+## Result 7: on a weaker model the overhead grows, it does not shrink
+
+The standard argument for a harness is that scaffolding matters most when the
+model is weaker. Every result above ran on the strongest available model — the
+least favourable case for the harness. So tasks 1, 5 and 6 were repeated on
+`claude-sonnet-5`, both conditions, answer keys removed from the container.
+
+**All twelve runs scored perfectly.** No quality difference on either model.
+
+| Task | Baseline tokens (mean) | prime-agent tokens (mean) | Ratio |
+|---|---|---|---|
+| 1 repo-nav | 30,615 | 91,191 | **3.0x** |
+| 5 large-data | 21,313 | 150,135 | **7.0x** |
+| 6 parallel | 13,818 | 54,909 | **4.0x** |
+
+On Opus the gap was ~1.6–1.9x. On Sonnet it is 3–7x. The harness's overhead
+scales *up* as the model gets cheaper, which is the opposite of the
+scaffolding-helps-weaker-models hypothesis. (In dollar terms the gap is smaller,
+1.2–1.9x, because prime-agent's caching shifts more of its usage into
+cache-reads.)
+
+---
+
+## Contamination control
+
+Task 5 exposed a real methodological hole: answer keys lived inside the
+container's readable filesystem, and `bash` is not constrained by the baseline's
+sandbox check.
+
+Tasks 1 and 3 were therefore re-run with **every** answer key moved out of the
+container for the duration:
+
+| | Original | Key-absent re-run |
+|---|---|---|
+| task 1 baseline | 19,550 tok | 22,460 tok |
+| task 1 prime-agent | 65,383 tok | 57,931 tok |
+| task 3 baseline | 45,186 tok | 46,573 tok |
+| task 3 prime-agent | 73,442 tok | 110,801 tok |
+
+All eight re-runs scored perfectly (task 1: 4/4 ×4; task 3: 30/30 exact ×4).
+**The published conclusions reproduce under control**; the baseline's advantage
+on task 1 is unchanged. Note prime-agent's much wider spread on task 3
+(73k → 111k across passes) — its token usage is markedly less predictable than
+the baseline's, which is itself worth knowing.
+
+Task 2 is rubric-scored and has no answer key, so it needed no control.
 
 ---
 

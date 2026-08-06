@@ -1,0 +1,17 @@
+{
+  "condition": "B-baseline",
+  "model": "claude-sonnet-5",
+  "task": "/home/bench/prompts/task6-parallel.txt",
+  "wall_seconds": 27.55,
+  "turns": 5,
+  "tokens": {
+    "input": 9,
+    "output": 1374,
+    "cache_read": 8318,
+    "cache_write": 3328
+  },
+  "total_tokens": 13029,
+  "cost_usd": 0.0356,
+  "stop_reason": "end_turn",
+  "final_text": "The analysis is complete. I examined all TypeScript source files under `packages/{agent,ai,coding-agent,tui}/src` and computed the four requested metrics for each package:\n\n- **agent**: 5 files, 2,395 total lines, largest file `agent-loop.ts` (986 lines), 5 exported functions\n- **ai**: 51 files, 34,013 total lines, largest file `models.generated.ts` (20,400 lines), 110 exported functions\n- **coding-agent**: 267 files, 115,565 total lines, largest file `agent-session.ts` (11,188 lines), 753 exported functions\n- **tui**: 32 files, 14,927 total lines, largest file `editor.ts` (2,527 lines), 75 exported functions\n\nThe results have been written as a single JSON object to `/home/bench/results/packages.json`."
+}
