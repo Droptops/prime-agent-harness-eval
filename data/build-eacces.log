@@ -1,0 +1,5 @@
+#9 2.632 prime-agent-0.7.0.tgz: OK
+#9 13.61 npm error code EACCES
+#9 13.61 npm error path /usr/local/lib/node_modules/prime-agent
+#9 13.61 npm error Error: EACCES: permission denied, mkdir '/usr/local/lib/node_modules/prime-agent'
+#9 13.61 npm error   code: 'EACCES',

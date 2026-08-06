@@ -1,0 +1,17 @@
+{
+  "condition": "B-baseline",
+  "model": "claude-opus-5",
+  "task": "/home/bench/prompts/task2-judgment.txt",
+  "wall_seconds": 125.89,
+  "turns": 14,
+  "tokens": {
+    "input": 413243,
+    "output": 8587,
+    "cache_read": 0,
+    "cache_write": 0
+  },
+  "total_tokens": 421830,
+  "cost_usd": 2.2809,
+  "stop_reason": "end_turn",
+  "final_text": "Written to `/home/bench/results/memo.md` (404 words). Position: **against** enabling auto-refine by default.\n\n**What the code says, and how I used it:**\n\n- **Trigger cadence** \u2014 `AutoRefineReason = \"turn_interval\" | \"compact\"` (refinement.ts:110). The constants aren't in refinement.ts, so I traced them to `getAutoRefineSettings()`: `turnInterval` 25, `compact` true, `cooldownMs` 20 min (settings-manager.ts:23\u201328, 835\u2013850), enforced at agent-session.ts:2361/2366.\n- **Scope default** \u2014 `scope: before?.scope ?? options.scope ?? \"local\"` (refinement.ts:768) and `options.global ? \"global\" : \"local\"` (1015), backed by prompt policy at 141/177/895. Decisive find: the auto-refine instruction string at agent-session.ts:977 explicitly forbids global promotion, so auto-refine writes are *always* session-local.\n- **Cost structure** \u2014 two calls per checkpoint: review at 40k chars in / 4,096 out (960, 194, 985); refine at 80k chars in / 32,000 out (892, 193, 919), plus overview (527\u2013543) and 20-entry history (553).\n\n**Two claims I softened after checking the callers.** I initially drafted an argument that a local refinement could silently mutate global entries, since `validateEdit` (664\u2013705) has no scope check and line 768 preserves `before?.scope`. Reading `_applyRefine` (agent-session.ts:7802\u20137830) showed the target store is re-read before applying, so such edits fail as \"entry not found\" rather than corrupting global state \u2014 I dropped the claim. Similarly, the concurrency guard at 727\u2013740 is inert in `refineHarness` (1012\u20131016), which omits `baselineState`, but the real production path does pass it, so I cut that too.\n\n**One number is an estimate, not code.** The \"~240 checkpoints/day, 7M+ input tokens\" figure is my arithmetic from the cooldown bound times stated assumptions (3 checkpoints/hr, 4 active hrs, 20 engineers); the assumptions are inline in the memo. I gave no dollar figure, since that would require pricing the repo doesn't contain.\n\nThe strongest point is the cost/benefit asymmetry in \u00a73: spend scales linearly with headcount while the artifacts are per-session and never merge. If you'd like the pro-default case argued instead, the material is there \u2014 bounded cadence, cheap 4k-token gate, immutable base prompt (671\u2013673), corrupt-state degradation (295\u2013301)."
+}

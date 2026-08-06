@@ -1,0 +1,17 @@
+{
+  "condition": "B-baseline",
+  "model": "claude-opus-5",
+  "task": "/home/bench/prompts/task3-long-horizon.txt",
+  "wall_seconds": 66.79,
+  "turns": 4,
+  "tokens": {
+    "input": 8,
+    "output": 6255,
+    "cache_read": 17045,
+    "cache_write": 12203
+  },
+  "total_tokens": 35511,
+  "cost_usd": 0.2412,
+  "stop_reason": "end_turn",
+  "final_text": "Written to `/home/bench/results/matrix.json` \u2014 31 of the 32 `KnownProvider` entries, valid JSON, single object, no prose.\n\nTwo judgment calls you should be aware of, since the source is genuinely ambiguous about what counts as a \"credential env var\":\n\n- **`amazon-bedrock` is included.** It has no entry in `getApiKeyEnvVars`, so `findEnvKeys(\"amazon-bedrock\")` returns `undefined` \u2014 under a strict \"mapping table only\" reading it would be omitted. I included it because `getEnvApiKey` does read seven AWS credential vars for it. Note the file's own docstring says `findEnvKeys` \"intentionally excludes ambient credential sources such as AWS profiles [and] AWS IAM credentials,\" so if your definition of \"reads credential env vars\" is `findEnvKeys`-based, drop this key.\n- **`google-vertex` lists two vars.** `GOOGLE_CLOUD_API_KEY` from `envMap` (checked first), then `GOOGLE_APPLICATION_CREDENTIALS` from the ADC fallback. I excluded `GOOGLE_CLOUD_PROJECT`, `GCLOUD_PROJECT`, and `GOOGLE_CLOUD_LOCATION`, which `getEnvApiKey` also reads but which are routing config rather than credentials.\n\nAlso worth flagging: `moonshotai`/`moonshotai-cn`, `opencode`/`opencode-go`, and `cloudflare-workers-ai`/`cloudflare-ai-gateway` each share one env var \u2014 that's in the source, not a copy error. `PRIME_TEAM_ID` is read by `getPrimeTeamId()` but is an identifier, not a credential, so it's not mapped to `prime-inference`. Only `openai-codex` is absent from all credential paths."
+}

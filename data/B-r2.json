@@ -1,0 +1,17 @@
+{
+  "condition": "B-baseline",
+  "model": "claude-opus-5",
+  "task": "/home/bench/prompts/task3-long-horizon.txt",
+  "wall_seconds": 90.96,
+  "turns": 6,
+  "tokens": {
+    "input": 12,
+    "output": 8944,
+    "cache_read": 47167,
+    "cache_write": 14509
+  },
+  "total_tokens": 70632,
+  "cost_usd": 0.3379,
+  "stop_reason": "end_turn",
+  "final_text": "Verified mechanically: all 32 union members accounted for, every `envMap` entry matches, no stray keys, and every env var name in the output appears literally in `env-api-keys.ts`.\n\n**Result written to `/home/bench/results/matrix.json`** \u2014 31 providers mapped, `openai-codex` omitted (no table entry and no fallback branch; it's OAuth-only per the file's doc comment).\n\nTwo judgment calls worth flagging, since the task said \"credential env vars the provider reads\" rather than strictly \"what `findEnvKeys` returns\":\n\n- **`amazon-bedrock`** has *no* `envMap` entry, so `findEnvKeys` returns `undefined` for it. I still included it, because `getEnvApiKey` has a dedicated branch that reads seven AWS credential vars. If your intended definition is \"whatever `findEnvKeys`/`getApiKeyEnvVars` returns,\" bedrock should be omitted instead. Note also that `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` are an *AND* pair in the source, not independent alternatives \u2014 a flat array can't express that.\n- **`google-vertex`** I listed as `GOOGLE_CLOUD_API_KEY` then `GOOGLE_APPLICATION_CREDENTIALS`. The ADC branch also reads `GOOGLE_CLOUD_PROJECT`, `GCLOUD_PROJECT`, and `GOOGLE_CLOUD_LOCATION`, but those are project/region selectors rather than credentials, so I excluded them; they're required alongside ADC for the `<authenticated>` result.\n\nAlso excluded: `PRIME_TEAM_ID` (read by `getPrimeTeamId`, but it's a team selector, not a credential, and isn't provider-keyed). Non-obvious mappings that survived verification: `google` \u2192 `GEMINI_API_KEY`, `vercel-ai-gateway` \u2192 `AI_GATEWAY_API_KEY`, `huggingface` \u2192 `HF_TOKEN`, and the shared vars where `moonshotai`/`moonshotai-cn` both use `MOONSHOT_API_KEY` while `minimax`/`minimax-cn` do *not* share."
+}

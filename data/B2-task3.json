@@ -1,0 +1,17 @@
+{
+  "condition": "B-baseline",
+  "model": "claude-opus-5",
+  "task": "/home/bench/prompts/task3-long-horizon.txt",
+  "wall_seconds": 70.33,
+  "turns": 7,
+  "tokens": {
+    "input": 14,
+    "output": 6211,
+    "cache_read": 32722,
+    "cache_write": 12959
+  },
+  "total_tokens": 51906,
+  "cost_usd": 0.2527,
+  "stop_reason": "end_turn",
+  "final_text": "Written to `/home/bench/results/matrix.json` \u2014 valid JSON, 31 of the 32 `KnownProvider` members, keyed in union order, no extra keys.\n\nTwo judgment calls worth flagging:\n\n- **`openai-codex` is the only omission.** It has no entry in `envMap`, no special case, and no ambient-credential block \u2014 it's OAuth-only, matching `getEnvApiKey`'s doc comment.\n- **\"Credential env var\" \u2260 \"what `findEnvKeys` returns.\"** `findEnvKeys` deliberately excludes ambient sources, so a strict `findEnvKeys`-only reading would drop `amazon-bedrock` entirely and reduce `google-vertex` to one var. I included the ambient vars because the file itself calls them credential sources (the Bedrock comment at line 188 says \"supports multiple credential sources\", and the `findEnvKeys` doc at 143\u2013145 names AWS profiles/IAM keys and Google ADC as credential sources it is skipping). I excluded `GOOGLE_CLOUD_PROJECT`, `GCLOUD_PROJECT`, and `GOOGLE_CLOUD_LOCATION` from `google-vertex` since those are project/region configuration rather than credentials, even though `getEnvApiKey` requires them alongside ADC. If you wanted the narrow `findEnvKeys` semantics instead, say so and I'll regenerate \u2014 that variant omits `amazon-bedrock` as well.\n\nOne nuance on precedence: for the Bedrock entry the \"order\" is really the short-circuit `||` evaluation order of a boolean check, not a first-match-wins key lookup, and `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` are an AND-pair rather than independent alternatives \u2014 I listed them adjacently in source order. Only `anthropic` and `github-copilot` have true first-non-empty-wins precedence."
+}

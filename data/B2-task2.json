@@ -1,0 +1,17 @@
+{
+  "condition": "B-baseline",
+  "model": "claude-opus-5",
+  "task": "/home/bench/prompts/task2-judgment.txt",
+  "wall_seconds": 114.66,
+  "turns": 13,
+  "tokens": {
+    "input": 26,
+    "output": 7533,
+    "cache_read": 310644,
+    "cache_write": 36999
+  },
+  "total_tokens": 355202,
+  "cost_usd": 0.575,
+  "stop_reason": "end_turn",
+  "final_text": "Written to `/home/bench/results/memo.md` (402 words).\n\n**Position: against enabling auto-refine by default** for a 20-engineer team.\n\nThe argument rests on three code-grounded facts I verified:\n\n1. **Trigger cadence** \u2014 `AutoRefineReason` is `\"turn_interval\" | \"compact\"` (refinement.ts:110); the interval default is 25 assistant turns with a 20-minute cooldown, and compact-triggered refine also defaults on (settings-manager.ts:842, 844, 846-848). Auto-refine is already `enabled ?? true` (settings-manager.ts:839), so the memo argues to flip an existing default rather than block a new one \u2014 I stated that explicitly.\n\n2. **Cost structure** \u2014 the gate `reviewAutoRefine` (949-998) runs on the *session's primary model* (agent-session.ts:7529, 7534-7544), sending 40,000 chars of conversation (960) plus a 40-entries-per-kind overview (527-541) at a 4,096-token cap (194, 204). Approval escalates to `planRefinement`, which re-sends 80,000 chars (892) with a 32,000-token cap (193, 200) that the comment at 187-192 says is intentionally *not* a constant so big proposals don't truncate.\n\n3. **Scope default** \u2014 `\"local\"` in three places (768, 1015, 883) and in the policy prompts (141, 177, 895); local state lives in the session artifact dir (273-275) and the cross-session rollback log only records global refinements (372-379). That's the crux: the spend is per-engineer, the benefit doesn't cross sessions or teammates.\n\nI gave the counter-case honest space (atomic writes 345-359, corrupt-state degradation 295-301, the conflict guard 727-740, immutable base prompt 671-673, rollback 804-836) and named a falsifiable condition for reversing the recommendation.\n\nOne caveat on my own reasoning: the \"20x cost\" framing is an inference from the local-scope default, not a measured number \u2014 the repo has no telemetry I could cite for checkpoint frequency in real sessions, which is exactly why the memo asks for a pilot rather than asserting a dollar figure."
+}

@@ -1,0 +1,17 @@
+{
+  "condition": "B-baseline",
+  "model": "claude-opus-5",
+  "task": "/home/bench/prompts/task1-repo-nav.txt",
+  "wall_seconds": 18.84,
+  "turns": 5,
+  "tokens": {
+    "input": 10,
+    "output": 1122,
+    "cache_read": 13090,
+    "cache_write": 5328
+  },
+  "total_tokens": 19550,
+  "cost_usd": 0.0679,
+  "stop_reason": "end_turn",
+  "final_text": "Done. Written to `/home/bench/results/answer.json`:\n\n- **`provider_count`: 32** \u2014 parsed from the `KnownProvider` union in `packages/ai/src/types.ts` (lines 19\u201351), sorted alphabetically.\n- **`models_generated_loc`: 20400** \u2014 line count of `packages/ai/src/models.generated.ts`.\n- **`largest_source_file`**: `packages/ai/src/models.generated.ts` at 20400 lines \u2014 the largest `.ts` file across all `packages/*/src/` trees (next largest is `packages/coding-agent/src/core/agent-session.ts` at 11188)."
+}

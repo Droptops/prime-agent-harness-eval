@@ -1,0 +1,17 @@
+{
+  "condition": "B-baseline",
+  "model": "claude-opus-5",
+  "task": "/home/bench/prompts/task3-long-horizon.txt",
+  "wall_seconds": 75.5,
+  "turns": 7,
+  "tokens": {
+    "input": 14,
+    "output": 6680,
+    "cache_read": 52629,
+    "cache_write": 13904
+  },
+  "total_tokens": 73227,
+  "cost_usd": 0.2803,
+  "stop_reason": "end_turn",
+  "final_text": "Written: 31 entries (all 32 union members except `openai-codex`, which has no credential env var anywhere in the file).\n\nTwo judgment calls worth flagging, since the file has two distinct credential mechanisms:\n\n- **amazon-bedrock** is not in the `envMap` table, but `getEnvApiKey` (L187\u2013211) explicitly reads seven AWS vars, so I included them in source order. Note `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` are an AND-pair, not independent alternatives \u2014 flattening them into a precedence list loses that nuance.\n- **google-vertex** gets `GOOGLE_CLOUD_API_KEY` (map, checked first) then `GOOGLE_APPLICATION_CREDENTIALS` (read at L82 via `hasVertexAdcCredentials`). I excluded `GOOGLE_CLOUD_PROJECT`, `GCLOUD_PROJECT`, and `GOOGLE_CLOUD_LOCATION`: the block reads them, but they're required configuration rather than credentials. If your definition is \"any env var read on the provider's auth path,\" those three belong in the vertex array too.\n\nAlso note the docstring on `findEnvKeys` (L140\u2013146) says it *intentionally excludes* AWS profiles/IAM and Google ADC \u2014 so an `findEnvKeys`-only reading would drop bedrock entirely and reduce vertex to `[\"GOOGLE_CLOUD_API_KEY\"]`. I went with the broader `getEnvApiKey` behavior since the task asked what each provider \"reads.\" Shared vars are intentional duplicates in the source: `MOONSHOT_API_KEY` (moonshotai, moonshotai-cn), `OPENCODE_API_KEY` (opencode, opencode-go), `CLOUDFLARE_API_KEY` (both cloudflare providers)."
+}

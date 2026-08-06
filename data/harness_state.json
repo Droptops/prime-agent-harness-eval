@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "entries": {
+    "prompt": {},
+    "memory": {
+      "env-api-keys-structure": {
+        "id": "env-api-keys-structure",
+        "kind": "memory",
+        "title": "prime-agent repo: credential resolution layout in packages/ai/src/env-api-keys.ts",
+        "content": "Repo /home/bench/work/repo (prime-agent v0.7.0), file packages/ai/src/env-api-keys.ts.\n\nCredential lookup has two distinct layers:\n1. Special-case `if` blocks ABOVE the `envMap` object; these override the map and are the only source of multi-var precedence lists:\n   - anthropic -> [\"ANTHROPIC_OAUTH_TOKEN\", \"ANTHROPIC_API_KEY\"]\n   - github-copilot -> [\"COPILOT_GITHUB_TOKEN\", \"GH_TOKEN\", \"GITHUB_TOKEN\"] (only 3-element list in the file)\n2. `const envMap` — provider id -> single env var string. 28 entries. Keys are quoted only when they contain hyphens; values are read literally and do NOT derive mechanically from provider ids (e.g. vercel-ai-gateway -> AI_GATEWAY_API_KEY, huggingface -> HF_TOKEN, google -> GEMINI_API_KEY). Vars are many-to-one across providers: moonshotai/moonshotai-cn share MOONSHOT_API_KEY, opencode/opencode-go share OPENCODE_API_KEY, cloudflare-workers-ai/cloudflare-ai-gateway share CLOUDFLARE_API_KEY. minimax-cn does NOT share with minimax (MINIMAX_CN_API_KEY).\n\nAmbient (non-API-key) credential sources are read only inside `getEnvApiKey`, never in `getApiKeyEnvVars`/`envMap`. The file's own doc comment states these are intentionally excluded from env-key reporting:\n- amazon-bedrock: AWS_PROFILE, AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY, AWS_BEARER_TOKEN_BEDROCK, AWS_CONTAINER_CREDENTIALS_RELATIVE_URI, AWS_CONTAINER_CREDENTIALS_FULL_URI, AWS_WEB_IDENTITY_TOKEN_FILE\n- google-vertex: ADC via GOOGLE_APPLICATION_CREDENTIALS, plus config-only GOOGLE_CLOUD_PROJECT / GCLOUD_PROJECT / GOOGLE_CLOUD_LOCATION. Its only mapped credential is GOOGLE_CLOUD_API_KEY.\n\nPRIME_TEAM_ID appears in the same file but is config, not a credential.\n\nprecedence semantics: `findEnvKeys`/`getEnvApiKey` use `envKeys?.[0]` first, so array order == precedence order.",
+        "path": "repo/prime-agent/packages-ai",
+        "scope": "local",
+        "reference": {},
+        "arguments": {},
+        "metadata": {
+          "scope": "local",
+          "source_files": [
+            "packages/ai/src/env-api-keys.ts",
+            "packages/ai/src/types.ts"
+          ]
+        },
+        "source": "refine",
+        "created_at": "2026-08-06T03:52:53.012Z",
+        "updated_at": "2026-08-06T03:52:53.012Z",
+        "version": 1
+      },
+      "matrix-json-task-result": {
+        "id": "matrix-json-task-result",
+        "kind": "memory",
+        "title": "Completed: provider -> credential env var matrix at /home/bench/results/matrix.json",
+        "content": "Task: map every member of the KnownProvider union (packages/ai/src/types.ts) to its credential env vars per packages/ai/src/env-api-keys.ts, omitting providers with no mapping. Output written as a bare JSON object (no fence, no prose) to /home/bench/results/matrix.json.\n\nStatus: DONE.\n\nKnownProvider has 32 members. 30 are present in the output; 2 omitted:\n- openai-codex: absent from envMap and from every special case; getApiKeyEnvVars returns undefined (OAuth-only provider).\n- amazon-bedrock: no API-key mapping at all; getEnvApiKey only consults ambient AWS credentials, which the file documents as intentionally excluded from env-key reporting.\n\nIf this decision is challenged, the alternative reading would add amazon-bedrock with [AWS_PROFILE, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_BEARER_TOKEN_BEDROCK, AWS_CONTAINER_CREDENTIALS_RELATIVE_URI, AWS_CONTAINER_CREDENTIALS_FULL_URI, AWS_WEB_IDENTITY_TOKEN_FILE]; the chosen reading follows the 'no credential env var mapping -> omit' instruction plus the file's own exclusion comment.\n\nMulti-element entries in the output: anthropic (2), github-copilot (3). All others are single-element.\n\nExtraction method that worked: read both files fully with open().read(), slice types.ts between 'export type KnownProvider' and 'export type Provider =' and regex `\\t\\| \"([^\"]+)\"` for the union members; slice env-api-keys.ts between 'const envMap' and 'const envVar = envMap' and regex `\"?([a-z0-9\\-]+)\"?:\\s*\"([A-Z0-9_]+)\"` for the map. Special cases must be added by hand since they live outside envMap.",
+        "path": "tasks/matrix-json",
+        "scope": "local",
+        "reference": {},
+        "arguments": {},
+        "metadata": {
+          "scope": "local",
+          "artifact": "/home/bench/results/matrix.json",
+          "provider_count": 32,
+          "emitted_count": 30,
+          "omitted": [
+            "amazon-bedrock",
+            "openai-codex"
+          ]
+        },
+        "source": "refine",
+        "created_at": "2026-08-06T03:52:53.012Z",
+        "updated_at": "2026-08-06T03:52:53.012Z",
+        "version": 1
+      }
+    },
+    "skill": {},
+    "subagent": {}
+  },
+  "refinements": [
+    {
+      "id": "refine_20260806035222704",
+      "trigger": "Persist the completed provider-to-env-var matrix task facts and the credential-resolution structure of packages/ai/src/env-api-keys.ts for this session.",
+      "changes": [
+        "create memory:env-api-keys-structure",
+        "create memory:matrix-json-task-result"
+      ],
+      "evidence": "The trajectory produced a concrete, verified artifact (/home/bench/results/matrix.json) and non-obvious source facts: KnownProvider has 32 members, envMap covers 28 of them, anthropic and github-copilot are special-cased above envMap with multi-var precedence, and amazon-bedrock/openai-codex have no API-key mapping (Bedrock only consults ambient AWS credentials that the file's own doc comment says are intentionally excluded from env-key reporting). These are session/project-specific findings about this repo checkout and the current task, so they belong in local memory rather than global. A reusable extraction skill is not justified from a single ad-hoc regex parse of two TypeScript files.",
+      "outcome": "If the task is revisited or extended (e.g. a grader disputes the omission of amazon-bedrock, or a follow-up asks about ambient credentials), the agent can immediately recall the resolved mapping, the omission rationale, and where each fact lives in the source without re-reading and re-parsing both files. Validate by checking that /home/bench/results/matrix.json still contains exactly the 30 recorded keys and that the recorded special cases match packages/ai/src/env-api-keys.ts.",
+      "created_at": "2026-08-06T03:52:53.012Z"
+    }
+  ]
+}
