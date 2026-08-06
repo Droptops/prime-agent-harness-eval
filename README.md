@@ -344,10 +344,37 @@ The refined run at 47,748 sits at **z = −0.77 — comfortably inside that rang
 
 A naive read of just the adjacent pair (47,748 vs 80,080) shows a 40% saving.
 That is an artifact of comparing two draws from a distribution whose standard
-deviation is ~24% of its mean. **No benefit is detectable at this sample size.**
-Detecting a 20% effect against this variance would need roughly n≈10 per arm.
+deviation is ~24% of its mean.
 
-This is the third time in this evaluation that an n=1 comparison produced an
+### Repeated at n=6 per arm: the effect is zero, not merely undetectable
+
+The n=1 result above was inconclusive rather than null, so the experiment was
+repeated properly — six paired arms, each seeding a session with task 3, forcing
+`/refine` (or not), then running task 4 in the same session.
+
+| Arm | n | mean task-4 tokens | sd | range |
+|---|---|---|---|---|
+| forced `/refine` | 6 | **49,507** | 2,805 | 46,077–54,316 |
+| control (no refine) | 6 | **49,379** | 7,934 | 44,344–65,325 |
+
+- Difference: **+128 tokens (+0.26%), in the *wrong* direction** — the refined
+  arm cost marginally more.
+- Welch t = 0.037, p > 0.9. 95% CI on the difference: **+128 ± 6,734 tokens.**
+- Minimum detectable effect at this n is ~6,802 tokens (13.8%). The observed
+  effect is **0.02x** that.
+- **All 12 arms answered correctly**, so correctness again cannot discriminate.
+
+The confidence interval is the useful part: it rules out any saving larger than
+about 13% with reasonable confidence. This is no longer "no benefit was
+detected" — it is **a null result with a bound on how large a real effect could
+be hiding.**
+
+One incidental observation: the refined arm's variance is markedly *lower*
+(sd 2,805 vs 7,934). Refinement did not make the agent cheaper, but it may have
+made it more consistent. That is a one-off observation from a single comparison,
+not a finding.
+
+This is the fourth time in this evaluation that an n=1 comparison produced an
 apparent effect that did not survive contact with more data.
 
 ---
@@ -718,8 +745,9 @@ and does not reproduce the error.
 - **The self-improvement feature did not run at all**, at defaults or when
   configured to be maximally eager, and enabling it produced no measurable
   benefit in a controlled contrast.
-- **When forced to run, its output produced no detectable benefit either** —
-  correctness saturated and the cost difference was inside run-to-run noise.
+- **When forced to run, its output produced no benefit** — at n=6 per arm the
+  difference is +0.26% in the wrong direction (95% CI ±6,734 tokens), ruling
+  out any saving larger than ~13%.
 - **Global scope is unreachable from the CLI**, so every lesson it writes dies
   with the session.
 - **Subagents spawn but are never collected in `-p` mode.** Instructed to
