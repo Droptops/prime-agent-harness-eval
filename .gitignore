@@ -1,0 +1,27 @@
+# Secrets / environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Evaluation output
+results/
+*.log
+.tmp/
+tmp/
+
+# Editors / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
