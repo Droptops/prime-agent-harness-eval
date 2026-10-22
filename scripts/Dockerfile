@@ -5,10 +5,10 @@ FROM node:22.23.4-bookworm-slim
 
 # Node 22 is already present from the base image, so install.sh's
 # install_node_npm_interactive() path (the only sudo caller) is never reached.
-# install.sh requires >=20.6.0; node:22 satisfies it.
+# The pinned runtime meets the security floor independently of installer policy.
 
 # Fail the build if the base image somehow regresses below the fixed patch.
-RUN node -e 'const [a,b,c]=process.versions.node.split(".").map(Number); if (a<22 || (a===22 && (b<23 || (b===23 && c<4)))) { console.error("node " + process.version + " is below 22.23.4 (CVE-2026-111497)"); process.exit(1) }'
+RUN node -e 'const v=process.versions.node; const m=/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.exec(v); const [a,b,c]=m?m.slice(1).map(Number):[]; const min={22:[23,4],24:[22,1],26:[12,1]}[a]; if (!min || !(b>min[0] || (b===min[0] && c>=min[1]))) { console.error("Unsupported Node " + v + "; require ^22.23.4 || ^24.22.1 || ^26.12.1 (CVE-2026-111497)"); process.exit(1); }'
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       curl ca-certificates git jq python3 python3-venv python3-pip \
