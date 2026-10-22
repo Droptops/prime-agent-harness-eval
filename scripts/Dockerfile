@@ -1,8 +1,14 @@
-FROM node:22-bookworm-slim
+# Pinned to a patch >= 22.23.4: the floating node:22 tag can resolve to a
+# runtime vulnerable to CVE-2026-111497 (Brotli decoder OOB write -> RCE,
+# fixed 2026-10-21). Bump this deliberately; don't float it.
+FROM node:22.23.4-bookworm-slim
 
 # Node 22 is already present from the base image, so install.sh's
 # install_node_npm_interactive() path (the only sudo caller) is never reached.
 # install.sh requires >=20.6.0; node:22 satisfies it.
+
+# Fail the build if the base image somehow regresses below the fixed patch.
+RUN node -e 'const [a,b,c]=process.versions.node.split(".").map(Number); if (a<22 || (a===22 && (b<23 || (b===23 && c<4)))) { console.error("node " + process.version + " is below 22.23.4 (CVE-2026-111497)"); process.exit(1) }'
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       curl ca-certificates git jq python3 python3-venv python3-pip \
